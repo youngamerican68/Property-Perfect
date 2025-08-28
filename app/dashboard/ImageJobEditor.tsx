@@ -78,20 +78,65 @@ export default function ImageJobEditor() {
     setIsProcessing(true)
     setProgress(0)
     
-    // TODO: Implement actual API call to enhance photo
-    // Simulate processing with progress
-    const interval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          setIsProcessing(false)
-          // TODO: Set actual enhanced image from API response
-          setEnhancedImage('/placeholder-enhanced.jpg')
-          return 100
-        }
-        return prev + 10
+    try {
+      // Simulate progress during processing
+      const progressInterval = setInterval(() => {
+        setProgress(prev => Math.min(prev + 10, 90))
+      }, 500)
+
+      const response = await fetch('/api/enhance', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await getAuthToken()}`
+        },
+        body: JSON.stringify({
+          imageUrl: uploadedImage,
+          prompt: customPrompt,
+          preset: getSelectedPreset()
+        })
       })
-    }, 300)
+
+      clearInterval(progressInterval)
+      setProgress(100)
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Enhancement failed')
+      }
+
+      const result = await response.json()
+      
+      // Set the enhanced image (for now it's the same as original)
+      setEnhancedImage(result.enhancedImageUrl)
+      
+      // Show success message if available
+      if (result.enhancementSuggestions) {
+        console.log('Enhancement suggestions:', result.enhancementSuggestions)
+      }
+
+    } catch (error) {
+      console.error('Enhancement error:', error)
+      setProgress(0)
+      // You could add error state here to show user-friendly error messages
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const getAuthToken = async () => {
+    const { supabase } = await import('@/lib/supabase-client')
+    const { data: { session } } = await supabase.auth.getSession()
+    return session?.access_token || ''
+  }
+
+  const getSelectedPreset = () => {
+    // Extract preset from custom prompt or return default
+    if (customPrompt.includes('Declutter')) return 'declutter'
+    if (customPrompt.includes('Virtual Staging')) return 'virtual-staging'
+    if (customPrompt.includes('Enhance')) return 'enhance'
+    if (customPrompt.includes('Repair')) return 'repair'
+    return 'enhance'
   }
 
   const canEnhance = uploadedImage && !isProcessing && creditBalance > 0

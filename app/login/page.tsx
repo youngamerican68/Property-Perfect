@@ -41,36 +41,77 @@ export default function LoginPage() {
     }
 
     try {
-      // TODO: Implement actual authentication logic
-      console.log('Login attempt:', { email, password })
+      const { supabase } = await import('@/lib/supabase-client')
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // For demo purposes, simulate successful login
-      alert('Login successful! (This is a demo - implement real auth)')
-      
-      // TODO: Redirect to dashboard on successful login
-      // window.location.href = '/dashboard'
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+
+      if (error) {
+        setErrors({ general: error.message })
+        return
+      }
+
+      if (data.user) {
+        // Get return URL from query params or default to dashboard
+        const urlParams = new URLSearchParams(window.location.search)
+        const returnTo = urlParams.get('returnTo') || '/dashboard'
+        
+        // Redirect to the intended page
+        window.location.href = returnTo
+      }
       
     } catch (error) {
       console.error('Login error:', error)
-      setErrors({ general: 'Login failed. Please check your credentials.' })
+      setErrors({ general: 'Login failed. Please try again.' })
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleGoogleLogin = () => {
-    // TODO: Implement Google OAuth
-    console.log('Google login clicked')
-    alert('Google login would be implemented here')
+  const handleGoogleLogin = async () => {
+    try {
+      const { supabase } = await import('@/lib/supabase-client')
+      
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`
+        }
+      })
+
+      if (error) {
+        setErrors({ general: error.message })
+      }
+    } catch (error) {
+      console.error('Google login error:', error)
+      setErrors({ general: 'Google login failed. Please try again.' })
+    }
   }
 
-  const handleForgotPassword = () => {
-    // TODO: Implement forgot password
-    console.log('Forgot password clicked')
-    alert('Forgot password flow would be implemented here')
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setErrors({ email: 'Please enter your email address first' })
+      return
+    }
+
+    try {
+      const { supabase } = await import('@/lib/supabase-client')
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`
+      })
+
+      if (error) {
+        setErrors({ general: error.message })
+      } else {
+        alert('Password reset email sent! Check your inbox.')
+      }
+    } catch (error) {
+      console.error('Password reset error:', error)
+      setErrors({ general: 'Password reset failed. Please try again.' })
+    }
   }
 
   return (

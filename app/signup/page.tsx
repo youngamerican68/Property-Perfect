@@ -82,17 +82,35 @@ export default function SignupPage() {
     }
 
     try {
-      // TODO: Implement actual registration logic
-      console.log('Signup attempt:', formData)
+      const { supabase } = await import('@/lib/supabase-client')
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      
-      // For demo purposes, simulate successful signup
-      alert('Account created successfully! (This is a demo - implement real auth)')
-      
-      // TODO: Redirect to dashboard or email verification
-      // window.location.href = '/dashboard'
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            full_name: `${formData.firstName} ${formData.lastName}`
+          }
+        }
+      })
+
+      if (error) {
+        setErrors({ general: error.message })
+        return
+      }
+
+      if (data.user) {
+        if (data.user.email_confirmed_at) {
+          // Email already confirmed, redirect to dashboard
+          window.location.href = '/dashboard'
+        } else {
+          // Email confirmation required
+          alert('Account created! Please check your email to confirm your account before signing in.')
+          window.location.href = '/login'
+        }
+      }
       
     } catch (error) {
       console.error('Signup error:', error)
@@ -102,10 +120,24 @@ export default function SignupPage() {
     }
   }
 
-  const handleGoogleSignup = () => {
-    // TODO: Implement Google OAuth
-    console.log('Google signup clicked')
-    alert('Google signup would be implemented here')
+  const handleGoogleSignup = async () => {
+    try {
+      const { supabase } = await import('@/lib/supabase-client')
+      
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`
+        }
+      })
+
+      if (error) {
+        setErrors({ general: error.message })
+      }
+    } catch (error) {
+      console.error('Google signup error:', error)
+      setErrors({ general: 'Google signup failed. Please try again.' })
+    }
   }
 
   return (

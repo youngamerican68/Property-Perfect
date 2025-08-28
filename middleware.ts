@@ -1,16 +1,12 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // TODO: Implement actual authentication logic
-  // For now, this middleware allows all requests but logs them
-  
-  console.log(`Middleware: ${request.method} ${pathname}`)
-
   // Define protected routes
-  const protectedRoutes = ['/dashboard']
+  const protectedRoutes = ['/dashboard', '/account']
   const authRoutes = ['/login', '/signup']
 
   // Check if the current path is a protected route
@@ -23,29 +19,30 @@ export function middleware(request: NextRequest) {
     pathname.startsWith(route)
   )
 
-  // TODO: Extract and validate JWT token from cookies or headers
-  // const token = request.cookies.get('auth_token')?.value || 
-  //               request.headers.get('authorization')?.replace('Bearer ', '')
-  
-  // TODO: Verify token and get user data
-  // let isAuthenticated = false
-  // let user = null
-  
-  // if (token) {
-  //   try {
-  //     user = await verifyJwtToken(token)
-  //     isAuthenticated = !!user
-  //   } catch (error) {
-  //     console.error('Token verification failed:', error)
-  //     isAuthenticated = false
-  //   }
-  // }
+  // Extract token from cookies
+  const token = request.cookies.get('sb-access-token')?.value ||
+                request.cookies.get('supabase-auth-token')?.value
 
-  // For demo purposes, simulate authentication check
-  const mockIsAuthenticated = false // Set to true to test authenticated flow
+  let isAuthenticated = false
 
-  if (isProtectedRoute && !mockIsAuthenticated) {
-    // TODO: Add auth logic to protect /dashboard routes
+  if (token) {
+    try {
+      // Create Supabase client for server-side auth
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      )
+
+      // Verify the token
+      const { data: { user }, error } = await supabase.auth.getUser(token)
+      isAuthenticated = !!user && !error
+    } catch (error) {
+      console.error('Token verification failed:', error)
+      isAuthenticated = false
+    }
+  }
+
+  if (isProtectedRoute && !isAuthenticated) {
     console.log(`Access denied to protected route: ${pathname}`)
     
     // Redirect to login page with return URL
@@ -55,8 +52,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  if (isAuthRoute && mockIsAuthenticated) {
-    // If user is already authenticated, redirect away from auth pages
+  if (isAuthRoute && isAuthenticated) {
     console.log(`Authenticated user accessing auth route: ${pathname}`)
     
     // Get return URL from query params or default to dashboard
@@ -66,19 +62,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl)
   }
 
-  // TODO: Add rate limiting for API routes
-  if (pathname.startsWith('/api/')) {
-    // TODO: Implement rate limiting based on IP or user ID
-    // const rateLimitResult = await checkRateLimit(request)
-    // if (rateLimitResult.exceeded) {
-    //   return NextResponse.json(
-    //     { error: 'Too many requests' },
-    //     { status: 429 }
-    //   )
-    // }
-  }
-
-  // TODO: Add CORS headers for API routes
+  // Handle API routes
   if (pathname.startsWith('/api/')) {
     const response = NextResponse.next()
     
@@ -90,7 +74,7 @@ export function middleware(request: NextRequest) {
     return response
   }
 
-  // TODO: Add security headers for all requests
+  // Add security headers for all requests
   const response = NextResponse.next()
   
   // Security headers
@@ -98,11 +82,6 @@ export function middleware(request: NextRequest) {
   response.headers.set('X-Frame-Options', 'DENY')
   response.headers.set('X-XSS-Protection', '1; mode=block')
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
-  
-  // TODO: Add Content Security Policy
-  // response.headers.set('Content-Security-Policy', 
-  //   "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';"
-  // )
 
   return response
 }

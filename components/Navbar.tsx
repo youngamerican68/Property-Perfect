@@ -1,16 +1,58 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Menu, X, User } from 'lucide-react'
+import { Menu, X, User, LogOut } from 'lucide-react'
+import { supabase } from '@/lib/supabase-client'
+import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [isAuthenticated, setIsAuthenticated] = useState(false) // TODO: Replace with real auth state
+  const [user, setUser] = useState<SupabaseUser | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen)
+
+  useEffect(() => {
+    // Get initial session
+    const getInitialSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      setUser(session?.user ?? null)
+      setIsLoading(false)
+    }
+
+    getInitialSession()
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setUser(session?.user ?? null)
+        setIsLoading(false)
+      }
+    )
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut()
+      window.location.href = '/'
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
+  }
+
+  const getUserInitials = (user: SupabaseUser) => {
+    const firstName = user.user_metadata?.first_name || ''
+    const lastName = user.user_metadata?.last_name || ''
+    if (firstName && lastName) {
+      return `${firstName[0]}${lastName[0]}`.toUpperCase()
+    }
+    return user.email?.[0]?.toUpperCase() || 'U'
+  }
 
   return (
     <nav className="bg-white shadow-sm border-b">
@@ -29,17 +71,26 @@ export default function Navbar() {
               <Link href="/pricing" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
                 Pricing
               </Link>
-              {isAuthenticated ? (
+              {!isLoading && (user ? (
                 <>
                   <Link href="/dashboard" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
                     Dashboard
                   </Link>
                   <div className="ml-4 flex items-center space-x-3">
-                    <Avatar className="h-8 w-8 cursor-pointer">
+                    <Avatar className="h-8 w-8">
                       <AvatarFallback>
-                        <User className="h-4 w-4" />
+                        {getUserInitials(user)}
                       </AvatarFallback>
                     </Avatar>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={handleLogout}
+                      className="text-gray-700 hover:text-red-600"
+                    >
+                      <LogOut className="h-4 w-4 mr-1" />
+                      Logout
+                    </Button>
                   </div>
                 </>
               ) : (
@@ -55,7 +106,7 @@ export default function Navbar() {
                     </Button>
                   </Link>
                 </div>
-              )}
+              ))}
             </div>
           </div>
 
@@ -83,7 +134,7 @@ export default function Navbar() {
               >
                 Pricing
               </Link>
-              {isAuthenticated ? (
+              {!isLoading && (user ? (
                 <>
                   <Link 
                     href="/dashboard" 
@@ -92,13 +143,28 @@ export default function Navbar() {
                   >
                     Dashboard
                   </Link>
-                  <div className="flex items-center px-3 py-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback>
-                        <User className="h-4 w-4" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="ml-3 text-gray-700">Profile</span>
+                  <div className="flex items-center justify-between px-3 py-2">
+                    <div className="flex items-center">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback>
+                          {getUserInitials(user)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="ml-3 text-gray-700">{user.user_metadata?.full_name || user.email}</span>
+                    </div>
+                  </div>
+                  <div className="px-3 py-2">
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start text-gray-700 hover:text-red-600"
+                      onClick={() => {
+                        setIsMenuOpen(false)
+                        handleLogout()
+                      }}
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Logout
+                    </Button>
                   </div>
                 </>
               ) : (
@@ -114,7 +180,7 @@ export default function Navbar() {
                     </Button>
                   </Link>
                 </div>
-              )}
+              ))}
             </div>
           </div>
         )}
