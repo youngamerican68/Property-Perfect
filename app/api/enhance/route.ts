@@ -171,10 +171,17 @@ export async function POST(request: NextRequest) {
 // TODO: Move to separate utils file
 function getPresetPrompt(preset: string): string {
   const presets: Record<string, string> = {
+    // Enhancement presets
     'declutter': 'Remove all unwanted objects, clutter, and personal items from this property photo while maintaining natural lighting and proportions',
     'virtual-staging': 'Add modern, tasteful furniture and decor to this empty space to make it more appealing to potential buyers',
     'enhance': 'Improve the lighting, colors, and overall quality of this property photo to make it more professional and attractive',
     'repair': 'Fix any visible damage, stains, or imperfections in this property photo while keeping it realistic',
+    
+    // LightLab relighting presets
+    'golden-hour': 'Transform this property photo to have warm, dramatic golden hour lighting with soft shadows and golden tones, as if shot during sunset/sunrise. Maintain all structural elements and décor while only changing the lighting and ambiance',
+    'soft-overcast': 'Relight this property photo with soft, even overcast lighting that eliminates harsh shadows and provides flattering, natural daylight. Keep all geometry and furnishings intact while optimizing the lighting conditions',
+    'bright-daylight': 'Transform the lighting in this property photo to crisp, clean bright daylight with excellent visibility and vibrant colors. Maintain the exact same composition and elements while upgrading to perfect daytime lighting',
+    'cozy-evening': 'Relight this property photo with warm, cozy evening interior lighting including warm lamp light and ambient lighting that creates an inviting atmosphere. Preserve all structural and decorative elements while enhancing the warmth and comfort'
   }
 
   return presets[preset] || 'Enhance this property photo to make it more appealing and professional'

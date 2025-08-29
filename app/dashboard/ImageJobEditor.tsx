@@ -18,11 +18,18 @@ export default function ImageJobEditor() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [progress, setProgress] = useState(0)
 
-  const presets = [
+  const enhancementPresets = [
     { id: 'declutter', label: 'Declutter', icon: Home, description: 'Remove unwanted objects' },
     { id: 'virtual-staging', label: 'Virtual Staging', icon: Paintbrush, description: 'Add furniture and decor' },
     { id: 'enhance', label: 'Enhance', icon: Sparkles, description: 'Improve lighting and colors' },
     { id: 'repair', label: 'Repair', icon: Wand2, description: 'Fix damages and imperfections' },
+  ]
+
+  const lightingPresets = [
+    { id: 'golden-hour', label: 'Golden Hour', icon: Sparkles, description: 'Warm dramatic lighting' },
+    { id: 'soft-overcast', label: 'Soft Overcast', icon: Sparkles, description: 'Even flattering daylight' },
+    { id: 'bright-daylight', label: 'Bright Daylight', icon: Sparkles, description: 'Crisp clean lighting' },
+    { id: 'cozy-evening', label: 'Cozy Evening', icon: Sparkles, description: 'Warm interior ambiance' },
   ]
 
   const handleDrag = useCallback((e: React.DragEvent) => {
@@ -66,10 +73,17 @@ export default function ImageJobEditor() {
     }
   }
 
-  const handlePresetClick = (presetId: string) => {
-    // TODO: Implement preset logic
-    console.log('Selected preset:', presetId)
-    setCustomPrompt(`Apply ${presets.find(p => p.id === presetId)?.label} enhancement`)
+  const handlePresetClick = (presetId: string, category: 'enhancement' | 'lighting') => {
+    console.log('Selected preset:', presetId, 'category:', category)
+    
+    const allPresets = [...enhancementPresets, ...lightingPresets]
+    const preset = allPresets.find(p => p.id === presetId)
+    
+    if (category === 'lighting') {
+      setCustomPrompt(`Apply ${preset?.label} relighting to transform the lighting and time-of-day appearance`)
+    } else {
+      setCustomPrompt(`Apply ${preset?.label} enhancement`)
+    }
   }
 
   const handleEnhancePhoto = async () => {
@@ -134,8 +148,12 @@ export default function ImageJobEditor() {
     // Extract preset from custom prompt or return default
     if (customPrompt.includes('Declutter')) return 'declutter'
     if (customPrompt.includes('Virtual Staging')) return 'virtual-staging'
-    if (customPrompt.includes('Enhance')) return 'enhance'
     if (customPrompt.includes('Repair')) return 'repair'
+    if (customPrompt.includes('Golden Hour')) return 'golden-hour'
+    if (customPrompt.includes('Soft Overcast')) return 'soft-overcast'
+    if (customPrompt.includes('Bright Daylight')) return 'bright-daylight'
+    if (customPrompt.includes('Cozy Evening')) return 'cozy-evening'
+    if (customPrompt.includes('relighting')) return 'golden-hour' // Default lighting preset
     return 'enhance'
   }
 
@@ -265,26 +283,57 @@ export default function ImageJobEditor() {
 
           {/* Preset Buttons */}
           {uploadedImage && (
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium text-gray-700">Quick Enhancement Presets</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {presets.map((preset) => {
-                  const IconComponent = preset.icon
-                  return (
-                    <Button
-                      key={preset.id}
-                      variant="outline"
-                      onClick={() => handlePresetClick(preset.id)}
-                      className="h-auto p-4 flex flex-col items-center space-y-2"
-                    >
-                      <IconComponent className="h-6 w-6" />
-                      <div className="text-center">
-                        <div className="font-medium">{preset.label}</div>
-                        <div className="text-xs text-gray-500">{preset.description}</div>
-                      </div>
-                    </Button>
-                  )
-                })}
+            <div className="space-y-6">
+              {/* Enhancement Presets */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-gray-700">Enhancement Tools</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {enhancementPresets.map((preset) => {
+                    const IconComponent = preset.icon
+                    return (
+                      <Button
+                        key={preset.id}
+                        variant="outline"
+                        onClick={() => handlePresetClick(preset.id, 'enhancement')}
+                        className="h-auto p-4 flex flex-col items-center space-y-2"
+                      >
+                        <IconComponent className="h-6 w-6" />
+                        <div className="text-center">
+                          <div className="font-medium">{preset.label}</div>
+                          <div className="text-xs text-gray-500">{preset.description}</div>
+                        </div>
+                      </Button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* LightLab Presets */}
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <h3 className="text-sm font-medium text-gray-700">LightLab Relighting</h3>
+                  <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded">NEW</span>
+                </div>
+                <p className="text-xs text-gray-600">Transform lighting and time-of-day appearance without changing camera angles</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {lightingPresets.map((preset) => {
+                    const IconComponent = preset.icon
+                    return (
+                      <Button
+                        key={preset.id}
+                        variant="outline"
+                        onClick={() => handlePresetClick(preset.id, 'lighting')}
+                        className="h-auto p-4 flex flex-col items-center space-y-2 border-amber-200 hover:border-amber-300 hover:bg-amber-50"
+                      >
+                        <IconComponent className="h-6 w-6 text-amber-600" />
+                        <div className="text-center">
+                          <div className="font-medium">{preset.label}</div>
+                          <div className="text-xs text-gray-500">{preset.description}</div>
+                        </div>
+                      </Button>
+                    )
+                  })}
+                </div>
               </div>
             </div>
           )}

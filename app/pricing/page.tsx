@@ -17,6 +17,7 @@ export default function PricingPage() {
       features: [
         '25 photo enhancements',
         'All enhancement tools (Declutter, Stage, Enhance, Repair)',
+        'LightLab relighting (Golden Hour, Soft Overcast, Bright Daylight)',
         'High-resolution outputs (up to 4K)',
         'Email support',
         'Standard processing speed',
@@ -35,6 +36,7 @@ export default function PricingPage() {
       features: [
         '75 photo enhancements',
         'All enhancement tools (Declutter, Stage, Enhance, Repair)',
+        'LightLab relighting (Golden Hour, Soft Overcast, Bright Daylight, Cozy Evening)',
         'High-resolution outputs (up to 4K)',
         'Priority support',
         'Faster processing speed',
@@ -55,6 +57,7 @@ export default function PricingPage() {
       features: [
         '300 photo enhancements',
         'All enhancement tools (Declutter, Stage, Enhance, Repair)',
+        'Full LightLab suite (All lighting presets + time-of-day transformations)',
         'High-resolution outputs (up to 4K)',
         'Dedicated account manager',
         'Fastest processing speed',
@@ -71,11 +74,53 @@ export default function PricingPage() {
     },
   ]
 
-  const handlePurchase = (tierName: string, price: number) => {
-    // TODO: Implement actual Stripe checkout
-    console.log(`Purchasing ${tierName} for $${price}`)
-    // This would integrate with Stripe Checkout
-    alert(`Redirecting to checkout for ${tierName} package ($${price})...`)
+  const handlePurchase = async (tierName: string, price: number) => {
+    try {
+      // Get the tier configuration
+      const tier = pricingTiers.find(t => t.name === tierName)
+      if (!tier) {
+        alert('Invalid plan selected')
+        return
+      }
+
+      // Get auth token
+      const { supabase } = await import('@/lib/supabase-client')
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session?.access_token) {
+        // Redirect to login with return URL
+        window.location.href = `/login?returnTo=${encodeURIComponent('/pricing')}`
+        return
+      }
+
+      // Create checkout session
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          planType: tierName,
+          credits: tier.credits,
+          price: tier.price
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create checkout session')
+      }
+
+      const { url } = await response.json()
+      
+      // Redirect to Stripe Checkout
+      window.location.href = url
+
+    } catch (error) {
+      console.error('Purchase error:', error)
+      alert(`Purchase failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
   }
 
   const handleContactSales = () => {
@@ -93,8 +138,8 @@ export default function PricingPage() {
             Choose Your Perfect Plan
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Transform your property photos with AI. Pay once, use anytime. 
-            No subscriptions, no hidden fees.
+            Transform your property photos with AI and professional relighting. 
+            Never shoot at the wrong time of day again. Pay once, use anytime.
           </p>
         </div>
 

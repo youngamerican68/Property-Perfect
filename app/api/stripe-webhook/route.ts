@@ -1,42 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server'
+import Stripe from 'stripe'
+import { supabase } from '@/lib/supabase-client'
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2024-12-18.acacia',
+})
 
 export async function POST(request: NextRequest) {
   try {
-    // TODO: Verify Stripe webhook signature
-    // const signature = request.headers.get('stripe-signature')
-    // const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
-    
-    // if (!signature || !webhookSecret) {
-    //   return NextResponse.json(
-    //     { error: 'Missing signature or webhook secret' },
-    //     { status: 400 }
-    //   )
-    // }
-
     const body = await request.text()
-    
-    // TODO: Verify webhook signature with Stripe
-    // let event: Stripe.Event
-    // try {
-    //   event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
-    // } catch (err) {
-    //   console.error('Webhook signature verification failed:', err)
-    //   return NextResponse.json(
-    //     { error: 'Invalid signature' },
-    //     { status: 400 }
-    //   )
-    // }
+    const signature = request.headers.get('stripe-signature')
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
 
-    // Mock event parsing for now
-    let event: any
-    try {
-      event = JSON.parse(body)
-    } catch (err) {
-      console.error('Invalid JSON in webhook body:', err)
-      return NextResponse.json(
-        { error: 'Invalid JSON' },
-        { status: 400 }
-      )
+    let event: Stripe.Event
+
+    // Verify webhook signature when secret is available
+    if (signature && webhookSecret && webhookSecret !== 'whsec_from_stripe_cli') {
+      try {
+        event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
+      } catch (err) {
+        console.error('Webhook signature verification failed:', err)
+        return NextResponse.json(
+          { error: 'Invalid signature' },
+          { status: 400 }
+        )
+      }
+    } else {
+      // For development without webhook secret, parse JSON directly
+      try {
+        event = JSON.parse(body)
+      } catch (err) {
+        console.error('Invalid JSON in webhook body:', err)
+        return NextResponse.json(
+          { error: 'Invalid JSON' },
+          { status: 400 }
+        )
+      }
     }
 
     console.log('Stripe webhook received:', event.type, event.id)
@@ -106,7 +105,7 @@ async function handleCheckoutCompleted(event: any) {
       currency
     })
 
-    // TODO: Extract user ID and plan from metadata
+    // Extract user ID and plan from metadata
     const userId = metadata?.userId
     const planType = metadata?.planType
     const credits = metadata?.credits
@@ -116,28 +115,47 @@ async function handleCheckoutCompleted(event: any) {
       return
     }
 
-    // TODO: Update user's credit balance in database
-    // await updateUserCredits(userId, parseInt(credits))
-    
-    // TODO: Create purchase record
-    // await createPurchaseRecord({
-    //   userId,
-    //   planType,
-    //   credits: parseInt(credits),
-    //   amount: amount_total,
-    //   currency,
-    //   stripeSessionId: session.id,
-    //   customerEmail: customer_email
-    // })
+    if (!credits) {
+      console.error('No credits in checkout session metadata')
+      return
+    }
 
-    // TODO: Send purchase confirmation email
-    // await sendPurchaseConfirmationEmail(customer_email, {
-    //   credits,
-    //   amount: amount_total / 100, // Convert from cents
-    //   currency
-    // })
+    const creditsToAdd = parseInt(credits)
 
-    console.log(`Successfully processed credit purchase for user ${userId}: ${credits} credits`)
+    // Update user's credit balance in database
+    const { error: creditError } = await supabase
+      .from('users')
+      .update({ 
+        credit_balance: supabase.raw(`credit_balance + ${creditsToAdd}`),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId)
+
+    if (creditError) {
+      console.error('Error updating user credits:', creditError)
+      throw new Error('Failed to update user credits')
+    }
+
+    // Create purchase record (we'll need to create this table)
+    const { error: purchaseError } = await supabase
+      .from('purchases')
+      .insert([{
+        user_id: userId,
+        plan_type: planType,
+        credits_purchased: creditsToAdd,
+        amount_paid: amount_total,
+        currency: currency,
+        stripe_session_id: session.id,
+        customer_email: customer_email,
+        purchase_date: new Date().toISOString()
+      }])
+
+    if (purchaseError) {
+      console.error('Error creating purchase record:', purchaseError)
+      // Don't throw here - credits were already added, just log the error
+    }
+
+    console.log(`Successfully processed credit purchase for user ${userId}: ${creditsToAdd} credits`)
 
   } catch (error) {
     console.error('Error handling checkout completion:', error)
