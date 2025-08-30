@@ -148,12 +148,17 @@ export async function POST(request: NextRequest) {
       
       jobData = createdJob
 
-      // Deduct credit
+      // Deduct credit - first get current balance, then subtract 1
+      const { data: currentUser } = await supabase
+        .from('users')
+        .select('credit_balance')
+        .eq('id', user.id)
+        .single()
+      
       const { error: creditError } = await supabase
         .from('users')
         .update({ 
-          credit_balance: supabase.raw('credit_balance - 1'),
-          updated_at: new Date().toISOString()
+          credit_balance: (currentUser?.credit_balance || 0) - 1
         })
         .eq('id', user.id)
 

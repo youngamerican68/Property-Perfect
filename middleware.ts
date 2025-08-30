@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -19,27 +19,23 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith(route)
   )
 
-  // Extract token from cookies
-  const token = request.cookies.get('sb-access-token')?.value ||
-                request.cookies.get('supabase-auth-token')?.value
+  // Create response and supabase client
+  const res = NextResponse.next()
+  const supabase = createMiddlewareClient({ req: request, res })
 
+  // Get session using auth-helpers
   let isAuthenticated = false
-
-  if (token) {
-    try {
-      // Create Supabase client for server-side auth
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      )
-
-      // Verify the token
-      const { data: { user }, error } = await supabase.auth.getUser(token)
-      isAuthenticated = !!user && !error
-    } catch (error) {
-      console.error('Token verification failed:', error)
-      isAuthenticated = false
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    isAuthenticated = !!session?.user
+    if (session?.user) {
+      console.log('User authenticated:', session.user.email)
+    } else {
+      console.log('No session found')
     }
+  } catch (error) {
+    console.error('Session check error:', error)
+    isAuthenticated = false
   }
 
   if (isProtectedRoute && !isAuthenticated) {
@@ -64,26 +60,21 @@ export async function middleware(request: NextRequest) {
 
   // Handle API routes
   if (pathname.startsWith('/api/')) {
-    const response = NextResponse.next()
-    
     // Set CORS headers
-    response.headers.set('Access-Control-Allow-Origin', '*')
-    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    res.headers.set('Access-Control-Allow-Origin', '*')
+    res.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+    res.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
     
-    return response
+    return res
   }
 
   // Add security headers for all requests
-  const response = NextResponse.next()
-  
-  // Security headers
-  response.headers.set('X-Content-Type-Options', 'nosniff')
-  response.headers.set('X-Frame-Options', 'DENY')
-  response.headers.set('X-XSS-Protection', '1; mode=block')
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  res.headers.set('X-Content-Type-Options', 'nosniff')
+  res.headers.set('X-Frame-Options', 'DENY')
+  res.headers.set('X-XSS-Protection', '1; mode=block')
+  res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
 
-  return response
+  return res
 }
 
 export const config = {

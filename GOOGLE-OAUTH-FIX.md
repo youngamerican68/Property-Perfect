@@ -49,6 +49,37 @@ Ensure these settings are correct in your Supabase project dashboard:
 - Authorized JavaScript origins: `http://localhost:3001` (or your dev port)
 - Authorized redirect URIs: `https://[your-project].supabase.co/auth/v1/callback`
 
+### Step 5: Fix Client-Server Auth Mismatch (CRITICAL)
+The most common remaining issue is that client-side shows "logged in" but middleware denies access to protected routes. This happens when using mismatched Supabase clients.
+
+**Problem**: Using `@supabase/supabase-js` on client but `@supabase/auth-helpers-nextjs` in middleware creates incompatible session storage (localStorage vs cookies).
+
+**Solution**: Use auth-helpers consistently everywhere.
+
+**Update `lib/supabase-client.ts`:**
+```tsx
+// Before (causes session mismatch)
+import { createClient } from '@supabase/supabase-js'
+export const supabase = createClient(url, key)
+
+// After (works with middleware)
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+export const supabase = createClientComponentClient()
+```
+
+**Update `lib/supabase-server.ts`:**
+```tsx
+// Add server client for user sessions
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
+
+export const createServerClient = () => {
+  return createServerComponentClient({ cookies })
+}
+```
+
+**Critical**: After making these changes, users must **log out and log back in** for auth-helpers to establish proper cookies.
+
 ## Key Insights
 
 ### What Doesn't Work
@@ -74,6 +105,9 @@ Ensure these settings are correct in your Supabase project dashboard:
 ## Files Modified
 - `app/login/page.tsx` - Line 77-79: Simplified OAuth call
 - `app/signup/page.tsx` - Line 127-129: Simplified OAuth call
+- `lib/supabase-client.ts` - Updated to use `createClientComponentClient`
+- `lib/supabase-server.ts` - Added `createServerClient` function
+- `middleware.ts` - Updated to use `createMiddlewareClient` from auth-helpers
 - Removed: `app/auth/callback/route.ts` (not needed)
 
 ## Success Criteria
