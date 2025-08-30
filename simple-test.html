@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PropertyPerfect Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>PropertyPerfect Quick Test</h1>
+    
+    <div id="auth-section">
+        <h2>Test Authentication</h2>
+        <input type="email" id="email" placeholder="test@example.com">
+        <input type="password" id="password" placeholder="TestPassword123">
+        <button onclick="signUp()">Sign Up</button>
+        <button onclick="signIn()">Sign In</button>
+        <div id="auth-status"></div>
+    </div>
+
+    <div id="enhancement-section" style="display:none;">
+        <h2>Test Image Enhancement</h2>
+        <input type="file" id="imageFile" accept="image/*">
+        <button onclick="enhanceImage()">Test Enhancement</button>
+        <div id="enhancement-status"></div>
+    </div>
+
+    <script>
+        const supabase = window.supabase.createClient(
+            'https://bydvnqevwloyzabewvsa.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ5ZHZucWV2d2xveXphYmV3dnNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzNzk5NTYsImV4cCI6MjA3MTk1NTk1Nn0.b2owzW7HMLOzx--UXdXRepiqLyemlokY64LvNMT090o'
+        );
+
+        async function signUp() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            const { data, error } = await supabase.auth.signUp({
+                email: email,
+                password: password,
+                options: {
+                    emailRedirectTo: 'http://localhost:3000/dashboard'
+                }
+            });
+            
+            console.log('SignUp response:', data, error);
+            document.getElementById('auth-status').innerHTML = 
+                `<pre>SignUp: ${JSON.stringify({data, error}, null, 2)}</pre>`;
+                
+            if (data.user) {
+                // Try to sign in immediately after signup
+                setTimeout(() => signIn(), 1000);
+            }
+        }
+
+        async function signIn() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: email,
+                password: password,
+            });
+            
+            document.getElementById('auth-status').innerHTML = 
+                `<pre>${JSON.stringify({data, error}, null, 2)}</pre>`;
+                
+            if (data.user && !error) {
+                document.getElementById('enhancement-section').style.display = 'block';
+            }
+        }
+
+        async function enhanceImage() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                alert('Please sign in first');
+                return;
+            }
+
+            // Create a test image (1x1 pixel PNG)
+            const testImageDataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
+
+            try {
+                const response = await fetch('http://localhost:3000/api/enhance', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`
+                    },
+                    body: JSON.stringify({
+                        imageUrl: testImageDataUrl,
+                        preset: 'golden-hour'
+                    })
+                });
+
+                const result = await response.json();
+                document.getElementById('enhancement-status').innerHTML = 
+                    `<pre>${JSON.stringify(result, null, 2)}</pre>`;
+
+            } catch (error) {
+                document.getElementById('enhancement-status').innerHTML = 
+                    `<pre>Error: ${error.message}</pre>`;
+            }
+        }
+    </script>
+</body>
+</html>

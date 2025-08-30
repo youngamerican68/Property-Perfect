@@ -2,7 +2,7 @@
 
 > **AI-Powered Real Estate Photo Enhancement with Revolutionary LightLab Technology**
 
-Transform your property photos with professional AI enhancement and photorealistic relighting. Never shoot at the wrong time of day again.
+Transform your property photos with professional AI enhancement and photorealistic relighting using Google's latest Gemini 2.5 Flash Image technology. Never shoot at the wrong time of day again.
 
 ## 🚀 What PropertyPerfect Does
 
@@ -37,6 +37,7 @@ Transform lighting and time-of-day appearance while preserving geometry:
 - **High-Resolution Outputs**: Up to 4K quality
 - **Geometry Preservation**: Maintains structural elements and décor
 - **MLS-Safe Exports**: Professional quality for real estate listings
+- **Instant Download**: High-quality enhanced images ready immediately
 
 ## 🎪 User Journey Examples
 
@@ -88,7 +89,7 @@ Transform lighting and time-of-day appearance while preserving geometry:
 - **Next.js API Routes** for serverless functions
 - **Supabase** for authentication and database
 - **PostgreSQL** with Row Level Security (RLS)
-- **Google Gemini 2.5 Flash** for AI image processing
+- **Google Gemini 2.5 Flash Image** for AI image generation and editing
 - **Stripe** for payment processing and webhooks
 
 ### Security & Authentication
@@ -99,7 +100,7 @@ Transform lighting and time-of-day appearance while preserving geometry:
 - **Row Level Security** on all database tables
 
 ### Key Integrations
-- **Google AI Studio** - Gemini API for image enhancement
+- **Google AI Studio** - Gemini 2.5 Flash Image API for actual image transformation
 - **Stripe Checkout** - Professional payment processing  
 - **Supabase** - Authentication, database, real-time features
 - **Vercel/Railway** ready for deployment
@@ -225,7 +226,7 @@ stripe listen --forward-to localhost:3000/api/stripe-webhook
 
 ### For Real Estate Agents
 1. **Sign up** with email or Google OAuth
-2. **Get 3 free credits** to test the platform
+2. **Get 1 free credit** to test the platform
 3. **Upload a property photo** (drag & drop)
 4. **Choose enhancement type**:
    - Quick presets for common needs

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
 import UploadGuidelines from '@/components/UploadGuidelines'
-import { Upload, Image as ImageIcon, Sparkles, Home, Trash2, Paintbrush, Wand2 } from 'lucide-react'
+import { Upload, Image as ImageIcon, Sparkles, Home, Trash2, Paintbrush, Wand2, Download } from 'lucide-react'
 import { useCredits } from '@/app/context/CreditContext'
 
 export default function ImageJobEditor() {
@@ -121,13 +121,8 @@ export default function ImageJobEditor() {
 
       const result = await response.json()
       
-      // Set the enhanced image (for now it's the same as original)
+      // Set the actual enhanced image from Gemini 2.5 Flash Image
       setEnhancedImage(result.enhancedImageUrl)
-      
-      // Show success message if available
-      if (result.enhancementSuggestions) {
-        console.log('Enhancement suggestions:', result.enhancementSuggestions)
-      }
 
     } catch (error) {
       console.error('Enhancement error:', error)
@@ -155,6 +150,15 @@ export default function ImageJobEditor() {
     if (customPrompt.includes('Cozy Evening')) return 'cozy-evening'
     if (customPrompt.includes('relighting')) return 'golden-hour' // Default lighting preset
     return 'enhance'
+  }
+
+  const downloadImage = (imageUrl: string, filename: string) => {
+    const link = document.createElement('a')
+    link.href = imageUrl
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   const canEnhance = uploadedImage && !isProcessing && creditBalance > 0
@@ -252,11 +256,22 @@ export default function ImageJobEditor() {
                 </CardHeader>
                 <CardContent>
                   {enhancedImage ? (
-                    <img 
-                      src={enhancedImage} 
-                      alt="Enhanced" 
-                      className="w-full h-64 object-contain rounded-lg border"
-                    />
+                    <div className="space-y-4">
+                      <img 
+                        src={enhancedImage} 
+                        alt="Enhanced" 
+                        className="w-full h-64 object-contain rounded-lg border"
+                      />
+                      <Button
+                        onClick={() => downloadImage(enhancedImage, 'enhanced-property-photo.png')}
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Download Enhanced Photo
+                      </Button>
+                    </div>
                   ) : (
                     <div className="w-full h-64 bg-gray-100 rounded-lg border flex items-center justify-center">
                       <p className="text-gray-500">Enhanced image will appear here</p>

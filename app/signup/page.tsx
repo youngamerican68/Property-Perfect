@@ -125,10 +125,7 @@ export default function SignupPage() {
       const { supabase } = await import('@/lib/supabase-client')
       
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/dashboard`
-        }
+        provider: 'google'
       })
 
       if (error) {
@@ -390,7 +387,7 @@ export default function SignupPage() {
         {/* Bonus Offer */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
           <p className="text-sm text-blue-700">
-            🎉 <strong>Welcome bonus:</strong> Get 5 free credits when you create your account!
+            🎉 <strong>Welcome bonus:</strong> Get 1 free credit when you create your account!
           </p>
         </div>
       </div>

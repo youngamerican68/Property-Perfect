@@ -323,7 +323,7 @@ export default function PricingPage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/dashboard">
               <Button size="lg" variant="secondary" className="text-lg px-8">
-                Start Free Trial
+                Try 1 Free Enhancement
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
