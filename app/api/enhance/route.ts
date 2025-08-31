@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { imageUrl, prompt, preset } = body
+    const { imageUrl, prompt, preset, editHistory = [], isMultiTurn = false } = body
 
     // Validate required fields
     if (!imageUrl) {
@@ -67,10 +67,10 @@ export async function POST(request: NextRequest) {
       
       if (userUsageError) {
         console.error('Error checking user daily usage:', userUsageError)
-      } else if ((userDailyUsage?.length || 0) >= 10) {
+      } else if ((userDailyUsage?.length || 0) >= 100) {
         return NextResponse.json({ 
           error: 'Daily limit reached',
-          message: 'You have reached your daily limit of 10 enhancements. Please try again tomorrow.' 
+          message: 'You have reached your daily limit of 100 enhancements. Please try again tomorrow.' 
         }, { status: 429 })
       }
       
@@ -172,7 +172,13 @@ export async function POST(request: NextRequest) {
 
     try {
       // Process with Gemini 2.5 Flash Image via OpenRouter
-      const enhancementPrompt = `Edit this image: ${prompt || getPresetPrompt(preset)}. IMPORTANT: You must generate and return a visually modified version of this image, not just describe what you would do. Actually edit the image to apply the lighting and enhancement changes requested.`
+      let enhancementPrompt = prompt || getPresetPrompt(preset)
+      
+      // For multi-turn editing, include conversation history
+      if (isMultiTurn && editHistory.length > 0) {
+        const historyContext = editHistory.map((edit, i) => `Edit ${i + 1}: ${edit}`).join('\n')
+        enhancementPrompt = `Continue editing this image. Previous edits made:\n${historyContext}\n\nNew edit: ${enhancementPrompt}\n\nIMPORTANT: You must keep ALL changes from previous edits while applying this new edit. Do not undo or reverse any previous modifications.`
+      }
 
       // Use OpenRouter's free Gemini 2.5 Flash Image model
       const response = await openai.chat.completions.create({
@@ -240,8 +246,7 @@ export async function POST(request: NextRequest) {
           .update({
             status: 'completed',
             enhanced_image_url: enhancedImageDataUrl,
-            completed_at: completedAt,
-            processing_time: '00:01:00'
+            completed_at: completedAt
           })
           .eq('id', jobData.id)
 
@@ -297,17 +302,17 @@ export async function POST(request: NextRequest) {
 // TODO: Move to separate utils file
 function getPresetPrompt(preset: string): string {
   const presets: Record<string, string> = {
-    // Enhancement presets
-    'declutter': 'Remove all unwanted objects, clutter, and personal items from this property photo while maintaining natural lighting and proportions',
-    'virtual-staging': 'Add modern, tasteful furniture and decor to this empty space to make it more appealing to potential buyers',
-    'enhance': 'Improve the lighting, colors, and overall quality of this property photo to make it more professional and attractive',
-    'repair': 'Fix any visible damage, stains, or imperfections in this property photo while keeping it realistic',
+    // Enhancement presets - conversational style for Gemini 2.5 Flash Image
+    'declutter': 'Can you please remove all the clutter from this closet? I need to remove the clothes hanging on the rods, any items on the shelves, boxes on the floor, and make this look like a clean, empty walk-in closet ready for real estate photos.',
+    'virtual-staging': 'Can you add some stylish furniture and decor to this empty room? Please include a modern sofa, coffee table, some plants, and artwork to make this space look inviting for potential home buyers.',
+    'enhance': 'Can you make this room look brighter and more vibrant? Please improve the lighting, boost the colors, and make this photo look more professional and appealing.',
+    'repair': 'Can you fix any damage or imperfections in this room? Please remove any stains, scratches, or wear and tear while keeping it looking realistic.',
     
-    // LightLab relighting presets
-    'golden-hour': 'Transform this property photo to have warm, dramatic golden hour lighting with soft shadows and golden tones, as if shot during sunset/sunrise. Maintain all structural elements and décor while only changing the lighting and ambiance',
-    'soft-overcast': 'Relight this property photo with soft, even overcast lighting that eliminates harsh shadows and provides flattering, natural daylight. Keep all geometry and furnishings intact while optimizing the lighting conditions',
-    'bright-daylight': 'Transform the lighting in this property photo to crisp, clean bright daylight with excellent visibility and vibrant colors. Maintain the exact same composition and elements while upgrading to perfect daytime lighting',
-    'cozy-evening': 'Transform this property photo to have warm, cozy evening interior lighting including warm lamp light and ambient lighting that creates an inviting atmosphere. Preserve all structural and decorative elements while enhancing the warmth and comfort'
+    // LightLab relighting presets - natural conversational requests
+    'golden-hour': 'Can you change the lighting in this room to warm golden hour lighting? Make it look like beautiful sunset light is coming through the windows with soft shadows and golden tones.',
+    'soft-overcast': 'Can you change the lighting to soft, even daylight? Please make it look like gentle overcast lighting that eliminates harsh shadows.',
+    'bright-daylight': 'Can you make this room much brighter with crisp daylight? Please transform the lighting to look like perfect bright daytime with excellent visibility.',
+    'cozy-evening': 'Can you change this to warm evening lighting? Please add cozy interior lighting with warm lamps to create an inviting atmosphere.'
   }
 
   return presets[preset] || 'Enhance this property photo to make it more appealing and professional'

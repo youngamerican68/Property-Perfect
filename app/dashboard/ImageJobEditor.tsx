@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
 import UploadGuidelines from '@/components/UploadGuidelines'
-import { Upload, Image as ImageIcon, Sparkles, Home, Trash2, Paintbrush, Wand2, Download } from 'lucide-react'
+import { Upload, Image as ImageIcon, Sparkles, Home, Trash2, Paintbrush, Wand2, Download, ChevronDown } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useCredits } from '@/app/context/CreditContext'
 
 export default function ImageJobEditor() {
@@ -17,6 +18,14 @@ export default function ImageJobEditor() {
   const [customPrompt, setCustomPrompt] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [progress, setProgress] = useState(0)
+  
+  // Conversation history for multi-turn editing
+  const [editHistory, setEditHistory] = useState<string[]>([])
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null)
+  
+  // Simplified dropdown selections
+  const [basicEnhancement, setBasicEnhancement] = useState('')
+  const [lightingMood, setLightingMood] = useState('')
 
   const enhancementPresets = [
     { id: 'declutter', label: 'Declutter', icon: Home, description: 'Remove unwanted objects' },
@@ -30,6 +39,18 @@ export default function ImageJobEditor() {
     { id: 'soft-overcast', label: 'Soft Overcast', icon: Sparkles, description: 'Even flattering daylight' },
     { id: 'bright-daylight', label: 'Bright Daylight', icon: Sparkles, description: 'Crisp clean lighting' },
     { id: 'cozy-evening', label: 'Cozy Evening', icon: Sparkles, description: 'Warm interior ambiance' },
+  ]
+
+  // Simplified broad dropdown options
+  const basicEnhancements = [
+    { value: 'declutter', label: 'Declutter', description: 'Remove clutter and personal items' },
+    { value: 'brighten', label: 'Brighten', description: 'Improve lighting and colors' },
+    { value: 'repair', label: 'Repair', description: 'Fix damages and imperfections' }
+  ]
+
+  const lightingMoods = [
+    { value: 'warm', label: 'Warm/Golden', description: 'Golden hour or cozy evening lighting' },
+    { value: 'bright', label: 'Bright/Natural', description: 'Crisp daylight or studio lighting' }
   ]
 
   const handleDrag = useCallback((e: React.DragEvent) => {
@@ -73,6 +94,36 @@ export default function ImageJobEditor() {
     }
   }
 
+  const generateDetailedPrompt = () => {
+    let promptParts = []
+    
+    // Add basic enhancement using simple conversational style
+    if (basicEnhancement) {
+      const enhancementDetails = {
+        'declutter': 'Can you please remove all the clutter and personal items from this room?',
+        'brighten': 'Can you make this room look brighter and more vibrant?',
+        'repair': 'Can you fix any damage or imperfections in this room?'
+      }
+      promptParts.push(enhancementDetails[basicEnhancement] || '')
+    }
+    
+    // Add lighting mood using simple conversational style
+    if (lightingMood) {
+      const lightingDetails = {
+        'warm': 'Can you also make the lighting warm and golden?',
+        'bright': 'Can you also make the lighting bright and natural?'
+      }
+      promptParts.push(lightingDetails[lightingMood] || '')
+    }
+    
+    // Add custom instructions if provided
+    if (customPrompt.trim()) {
+      promptParts.push(customPrompt.trim())
+    }
+    
+    return promptParts.join(' ') || 'Enhance this property photo to make it more appealing and professional'
+  }
+
   const handlePresetClick = (presetId: string, category: 'enhancement' | 'lighting') => {
     console.log('Selected preset:', presetId, 'category:', category)
     
@@ -98,6 +149,28 @@ export default function ImageJobEditor() {
         setProgress(prev => Math.min(prev + 10, 90))
       }, 500)
 
+      // Use the current enhanced image as base if it exists (for multi-turn editing)
+      const baseImageUrl = currentImageUrl || uploadedImage
+      
+      // Debug dropdown selections
+      console.log('Dropdown selections:', {
+        basicEnhancement,
+        lightingMood
+      })
+      
+      let currentPrompt
+      if (editHistory.length > 0 && customPrompt.trim()) {
+        // Multi-turn editing: use custom instruction as the new edit
+        currentPrompt = customPrompt.trim()
+      } else {
+        // First edit: use detailed prompt from dropdowns or custom prompt
+        currentPrompt = (basicEnhancement || lightingMood || customPrompt.trim()) ? generateDetailedPrompt() : 'Enhance this property photo'
+      }
+      
+      console.log('Generated prompt:', currentPrompt)
+      console.log('Using dropdowns?', !!(basicEnhancement || lightingMood))
+      console.log('Edit history:', editHistory)
+      
       const response = await fetch('/api/enhance', {
         method: 'POST',
         headers: {
@@ -105,9 +178,11 @@ export default function ImageJobEditor() {
           'Authorization': `Bearer ${await getAuthToken()}`
         },
         body: JSON.stringify({
-          imageUrl: uploadedImage,
-          prompt: customPrompt,
-          preset: getSelectedPreset()
+          imageUrl: baseImageUrl,
+          prompt: currentPrompt,
+          preset: (basicEnhancement || lightingMood) && editHistory.length === 0 ? null : getSelectedPreset(),
+          editHistory: editHistory,
+          isMultiTurn: editHistory.length > 0
         })
       })
 
@@ -121,8 +196,15 @@ export default function ImageJobEditor() {
 
       const result = await response.json()
       
-      // Set the actual enhanced image from Gemini 2.5 Flash Image
+      // Update conversation history and current image
+      const newHistory = [...editHistory, currentPrompt]
+      console.log('Updating edit history from:', editHistory, 'to:', newHistory)
+      setEditHistory(newHistory)
+      setCurrentImageUrl(result.enhancedImageUrl)
       setEnhancedImage(result.enhancedImageUrl)
+      
+      // Clear custom prompt after successful enhancement to prevent confusion
+      setCustomPrompt('')
 
     } catch (error) {
       console.error('Enhancement error:', error)
@@ -194,7 +276,7 @@ export default function ImageJobEditor() {
                     <img 
                       src={uploadedImage} 
                       alt="Uploaded" 
-                      className="max-h-64 mx-auto rounded-lg object-contain"
+                      className="max-h-96 mx-auto rounded-lg object-contain"
                     />
                     <p className="text-sm text-green-600 font-medium">Image uploaded successfully!</p>
                     <Button
@@ -204,6 +286,10 @@ export default function ImageJobEditor() {
                         setUploadedImage(null)
                         setEnhancedImage(null)
                         setCustomPrompt('')
+                        setEditHistory([])
+                        setCurrentImageUrl(null)
+                        setBasicEnhancement('')
+                        setLightingMood('')
                       }}
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
@@ -245,7 +331,7 @@ export default function ImageJobEditor() {
                   <img 
                     src={uploadedImage} 
                     alt="Original" 
-                    className="w-full h-64 object-contain rounded-lg border"
+                    className="w-full h-96 object-contain rounded-lg border"
                   />
                 </CardContent>
               </Card>
@@ -260,20 +346,37 @@ export default function ImageJobEditor() {
                       <img 
                         src={enhancedImage} 
                         alt="Enhanced" 
-                        className="w-full h-64 object-contain rounded-lg border"
+                        className="w-full h-96 object-contain rounded-lg border"
                       />
                       <Button
                         onClick={() => downloadImage(enhancedImage, 'enhanced-property-photo.png')}
                         variant="outline"
                         size="sm"
-                        className="w-full"
+                        className="w-full mb-2"
                       >
                         <Download className="h-4 w-4 mr-2" />
                         Download Enhanced Photo
                       </Button>
+                      {editHistory.length > 0 && (
+                        <Button
+                          onClick={() => {
+                            setEditHistory([])
+                            setCurrentImageUrl(null)
+                            setBasicEnhancement('')
+                            setLightingMood('')
+                            setCustomPrompt('')
+                            console.log('Starting fresh edit session - cleared all state')
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                        >
+                          Start Fresh Edit Session
+                        </Button>
+                      )}
                     </div>
                   ) : (
-                    <div className="w-full h-64 bg-gray-100 rounded-lg border flex items-center justify-center">
+                    <div className="w-full h-96 bg-gray-100 rounded-lg border flex items-center justify-center">
                       <p className="text-gray-500">Enhanced image will appear here</p>
                     </div>
                   )}
@@ -287,67 +390,67 @@ export default function ImageJobEditor() {
             <div className="space-y-4">
               <label className="block text-sm font-medium text-gray-700">
                 Custom Enhancement Instructions
+                <span className="text-xs text-gray-500 font-normal ml-2">(Be specific about what you want)</span>
               </label>
               <Input
-                placeholder="Describe what you want to enhance or modify in your image..."
+                placeholder="e.g., 'Remove the couch and coffee table', 'Make the walls white', 'Add warm evening lighting'..."
                 value={customPrompt}
                 onChange={(e) => setCustomPrompt(e.target.value)}
               />
             </div>
           )}
 
-          {/* Preset Buttons */}
+          {/* Advanced Enhancement Options */}
           {uploadedImage && (
             <div className="space-y-6">
-              {/* Enhancement Presets */}
               <div className="space-y-4">
-                <h3 className="text-sm font-medium text-gray-700">Enhancement Tools</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {enhancementPresets.map((preset) => {
-                    const IconComponent = preset.icon
-                    return (
-                      <Button
-                        key={preset.id}
-                        variant="outline"
-                        onClick={() => handlePresetClick(preset.id, 'enhancement')}
-                        className="h-auto p-4 flex flex-col items-center space-y-2"
-                      >
-                        <IconComponent className="h-6 w-6" />
-                        <div className="text-center">
-                          <div className="font-medium">{preset.label}</div>
-                          <div className="text-xs text-gray-500">{preset.description}</div>
-                        </div>
-                      </Button>
-                    )
-                  })}
+                <h3 className="text-lg font-semibold text-gray-800">Quick Enhancement Options</h3>
+                <p className="text-sm text-gray-600">Choose basic enhancements or use the custom instructions field below to be more specific</p>
+                
+                {/* Basic Enhancement Options */}
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    <Sparkles className="inline h-4 w-4 mr-2" />
+                    Basic Enhancement
+                  </label>
+                  <Select value={basicEnhancement} onValueChange={setBasicEnhancement}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Choose enhancement type (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {basicEnhancements.map((enhancement) => (
+                        <SelectItem key={enhancement.value} value={enhancement.value}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{enhancement.label}</span>
+                            <span className="text-xs text-gray-500">{enhancement.description}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </div>
 
-              {/* LightLab Presets */}
-              <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <h3 className="text-sm font-medium text-gray-700">LightLab Relighting</h3>
-                  <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded">NEW</span>
-                </div>
-                <p className="text-xs text-gray-600">Transform lighting and time-of-day appearance without changing camera angles</p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {lightingPresets.map((preset) => {
-                    const IconComponent = preset.icon
-                    return (
-                      <Button
-                        key={preset.id}
-                        variant="outline"
-                        onClick={() => handlePresetClick(preset.id, 'lighting')}
-                        className="h-auto p-4 flex flex-col items-center space-y-2 border-amber-200 hover:border-amber-300 hover:bg-amber-50"
-                      >
-                        <IconComponent className="h-6 w-6 text-amber-600" />
-                        <div className="text-center">
-                          <div className="font-medium">{preset.label}</div>
-                          <div className="text-xs text-gray-500">{preset.description}</div>
-                        </div>
-                      </Button>
-                    )
-                  })}
+                {/* Lighting Mood Options */}
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    <Sparkles className="inline h-4 w-4 mr-2 text-amber-600" />
+                    Lighting Mood
+                  </label>
+                  <Select value={lightingMood} onValueChange={setLightingMood}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Choose lighting mood (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {lightingMoods.map((mood) => (
+                        <SelectItem key={mood.value} value={mood.value}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{mood.label}</span>
+                            <span className="text-xs text-gray-500">{mood.description}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>
