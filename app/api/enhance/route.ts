@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { supabase } from '@/lib/supabase-client'
 
-// Use OpenRouter instead of Google directly to avoid quota issues
+// Use OpenRouter for Gemini 2.5 Flash Image access
 const openai = new OpenAI({
   baseURL: 'https://openrouter.ai/api/v1',
   apiKey: process.env.OPENROUTER_API_KEY,
@@ -74,7 +74,9 @@ export async function POST(request: NextRequest) {
         }, { status: 429 })
       }
       
-      // Check application-wide daily limit (50 per day)
+      // TODO: PRODUCTION - Re-enable application-wide daily limit for cost control
+      // Check application-wide daily limit (50 per day) - DISABLED FOR DEVELOPMENT
+      /*
       const { data: totalDailyUsage, error: totalUsageError } = await supabase
         .from('enhancement_jobs')
         .select('id')
@@ -89,6 +91,7 @@ export async function POST(request: NextRequest) {
           message: 'Daily enhancement limit reached. Service will resume tomorrow.' 
         }, { status: 503 })
       }
+      */
 
       // Check user's credit balance
       const { data: userData, error: userError } = await supabase
@@ -174,13 +177,22 @@ export async function POST(request: NextRequest) {
       // Process with Gemini 2.5 Flash Image via OpenRouter
       let enhancementPrompt = prompt || getPresetPrompt(preset)
       
-      // For multi-turn editing, include conversation history
+      // Debug: Log what we received
+      console.log('=== API RECEIVED ===')
+      console.log('Preset:', preset)
+      console.log('Prompt:', prompt)
+      console.log('Enhancement prompt before multi-turn:', enhancementPrompt)
+      
+      // For multi-turn editing, build on previous scene description
       if (isMultiTurn && editHistory.length > 0) {
-        const historyContext = editHistory.map((edit, i) => `Edit ${i + 1}: ${edit}`).join('\n')
-        enhancementPrompt = `Continue editing this image. Previous edits made:\n${historyContext}\n\nNew edit: ${enhancementPrompt}\n\nIMPORTANT: You must keep ALL changes from previous edits while applying this new edit. Do not undo or reverse any previous modifications.`
+        // Combine previous edits into a cumulative scene description
+        const sceneHistory = editHistory.join(', while also ')
+        enhancementPrompt = `Continue enhancing this property photo that has already been transformed with: ${sceneHistory}. Now also ${enhancementPrompt.toLowerCase()}. Maintain all previous improvements while applying this new enhancement. Create a cohesive, professional real estate photo that combines all these elements naturally.`
       }
+      
+      console.log('Final prompt sent to AI:', enhancementPrompt)
 
-      // Use OpenRouter's free Gemini 2.5 Flash Image model
+      // Use OpenRouter's Gemini 2.5 Flash Image model
       const response = await openai.chat.completions.create({
         model: 'google/gemini-2.5-flash-image-preview:free',
         messages: [
@@ -200,7 +212,9 @@ export async function POST(request: NextRequest) {
             ]
           }
         ],
-        max_tokens: 4096
+        max_tokens: 8192,
+        temperature: 1,
+        top_p: 0.95
       })
 
       // Extract response from OpenRouter
@@ -302,20 +316,20 @@ export async function POST(request: NextRequest) {
 // TODO: Move to separate utils file
 function getPresetPrompt(preset: string): string {
   const presets: Record<string, string> = {
-    // Enhancement presets - conversational style for Gemini 2.5 Flash Image
-    'declutter': 'Can you please remove all the clutter from this closet? I need to remove the clothes hanging on the rods, any items on the shelves, boxes on the floor, and make this look like a clean, empty walk-in closet ready for real estate photos.',
-    'virtual-staging': 'Can you add some stylish furniture and decor to this empty room? Please include a modern sofa, coffee table, some plants, and artwork to make this space look inviting for potential home buyers.',
-    'enhance': 'Can you make this room look brighter and more vibrant? Please improve the lighting, boost the colors, and make this photo look more professional and appealing.',
-    'repair': 'Can you fix any damage or imperfections in this room? Please remove any stains, scratches, or wear and tear while keeping it looking realistic.',
+    // Enhancement presets - photographic descriptions for Gemini 2.5 Flash Image
+    'declutter': 'remove only small clutter items like papers, clothes, personal belongings, and scattered objects while keeping all furniture, decor, and permanent fixtures in place to create a clean, staged appearance perfect for real estate photography',
+    'virtual-staging': 'transform this empty room with stylish modern furniture including a contemporary sofa, elegant coffee table, tasteful plants, and curated artwork to create an inviting space that appeals to potential home buyers',
+    'enhance': 'enhance this room with improved lighting, boosted colors, and professional photo quality to create a vibrant, appealing real estate image',
+    'repair': 'fix all visible damage, stains, scratches, and imperfections throughout this room while maintaining a realistic, move-in-ready appearance',
     
-    // LightLab relighting presets - natural conversational requests
-    'golden-hour': 'Can you change the lighting in this room to warm golden hour lighting? Make it look like beautiful sunset light is coming through the windows with soft shadows and golden tones.',
-    'soft-overcast': 'Can you change the lighting to soft, even daylight? Please make it look like gentle overcast lighting that eliminates harsh shadows.',
-    'bright-daylight': 'Can you make this room much brighter with crisp daylight? Please transform the lighting to look like perfect bright daytime with excellent visibility.',
-    'cozy-evening': 'Can you change this to warm evening lighting? Please add cozy interior lighting with warm lamps to create an inviting atmosphere.'
+    // LightLab relighting presets - natural photographic language
+    'golden-hour': 'Edit this image with natural golden hour light streaming through windows, creating soft warm lighting with gentle shadows and subtle glow, using dynamic studio lighting with mild shadows and natural color tone',
+    'soft-overcast': 'Edit this image with soft, even daylight that eliminates harsh shadows, using flash lighting with a soft box effect to create gentle, flattering illumination throughout the space',
+    'bright-daylight': 'Edit this image with bright midday sunlight flooding the space, using dynamic studio lighting with high contrast shadows to eliminate dark areas and create excellent visibility with crisp, vibrant atmosphere',
+    'cozy-evening': 'Edit this image with ambient evening lighting featuring dual light setup with warm front and cool backlight, creating soft warm lighting with gentle shadows and intimate cozy twilight atmosphere'
   }
 
-  return presets[preset] || 'Enhance this property photo to make it more appealing and professional'
+  return presets[preset] || 'transform this property photo into a professional, appealing real estate image that attracts potential buyers'
 }
 
 // TODO: Implement GET endpoint for retrieving job status

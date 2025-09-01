@@ -52,13 +52,31 @@
 - [x] **Production-ready image transformation** at $0.039 per image
 - [x] **Real LightLab technology** with visual lighting transformations
 
+### Phase 7: Enhanced User Experience & Multi-Turn Editing ✅
+- [x] **Simplified Dropdown System**: Reduced from 20+ complex options to 5 simple, reliable choices
+- [x] **Multi-Turn Conversation System**: Preserve previous edits while applying new changes
+- [x] **Conversational Prompt Style**: Improved AI response accuracy using natural language
+- [x] **Enhanced Custom Instructions**: Better integration of specific user requests
+- [x] **Improved State Management**: Better tracking of edit history and dropdown selections
+- [x] **Debugging & Monitoring**: Added comprehensive logging for troubleshooting
+
+### Phase 8: Room-Specific Enhancement & Exact AI Studio Prompts ✅
+- [x] **Room Type Detection**: Bedroom, Living Room, Kitchen, Bathroom, Office categories
+- [x] **Bedroom-Specific Styling**: 6 curated bedroom enhancement options
+- [x] **Exact AI Studio Prompts**: Verbatim prompts that work perfectly in Google AI Studio
+- [x] **Prompt Precision**: Removed interfering HDR prefixes for bedroom styles
+- [x] **Two-Stage Workflow**: Quick Enhance → Custom Modifications
+- [x] **Multi-Turn Consistency**: Maintains previous changes while applying new ones
+- [x] **Realtor-Focused UX**: "Sell Homes Faster" messaging with proven statistics
+
 ## 🎯 Key Features
 
 ### 🤖 AI-Powered Enhancement
-- **Enhancement Tools**: Declutter, Virtual Staging, Enhance, Repair
-- **LightLab Relighting**: Transform time-of-day and lighting conditions
+- **Simplified Enhancement Tools**: Declutter, Brighten, Repair (3 reliable options)
+- **Lighting Moods**: Warm/Golden, Bright/Natural (2 simple choices)
+- **Custom Instructions**: Specific user requests with conversational AI prompts
+- **Multi-Turn Editing**: Preserve previous changes while applying new modifications
 - **Gemini 2.5 Flash Image**: Actual visual transformation and generation
-- **Geometry Preservation**: Maintains structural elements while transforming lighting
 - **Download Capability**: High-quality enhanced images ready for MLS
 
 ### 🔐 Secure Authentication
@@ -177,7 +195,55 @@ STRIPE_WEBHOOK_SECRET=❌ (from Stripe CLI: stripe listen)
 - Professional workflow integration ready
 - Scalable technical architecture
 
+## 🏗️ Technical Infrastructure
+
+### Frontend Architecture
+- **Framework**: Next.js 15.5.2 with App Router and Turbopack
+- **UI Components**: shadcn/ui with Tailwind CSS
+- **State Management**: React hooks with credit context
+- **Image Handling**: Client-side upload with base64 conversion
+- **Multi-Turn System**: Edit history tracking with conversational AI prompts
+
+### Backend & AI Integration
+- **AI Model**: Gemini 2.5 Flash Image via OpenRouter API
+- **Model Access**: `google/gemini-2.5-flash-image-preview:free`
+- **API Route**: `/api/enhance` with comprehensive error handling
+- **Prompt Engineering**: Room-specific prompts with exact AI Studio-tested verbatim text
+- **Multi-Turn Logic**: Cumulative scene description building
+- **Rate Limiting**: User (100/day) and application-wide limits
+
+### Database & Authentication
+- **Database**: Supabase PostgreSQL with real-time subscriptions
+- **Authentication**: Google OAuth via Supabase Auth
+- **Tables**: `users`, `enhancement_jobs` with credit tracking
+- **Security**: Row Level Security (RLS) policies
+- **Credit System**: Pay-per-use with Stripe integration
+
+### Infrastructure Components
+```
+Frontend (Next.js) → API Route (/api/enhance) → OpenRouter → Gemini 2.5 Flash Image
+                                ↓
+                          Supabase Database
+                          - User management
+                          - Credit tracking
+                          - Job history
+                          - Authentication
+```
+
+### Key Technical Decisions
+- **OpenRouter over Direct API**: Avoids Google's strict rate limits while maintaining model access
+- **Room-Specific Prompts**: Prevents unwanted room type changes (bedroom → living room)
+- **Two-Stage Workflow**: Quick Enhance + Custom Modifications for optimal results
+- **Exact Prompt Matching**: Verbatim AI Studio prompts for consistent results
+- **Repair-First Logic**: Better results when repairs are applied to original images
+
+### Development Environment
+- **Local Development**: `npm run dev` with Turbopack
+- **Environment Variables**: `.env.local` with Supabase, OpenRouter, and Stripe keys
+- **Git Workflow**: Feature branches with descriptive commit messages
+- **Debugging**: Comprehensive console logging for AI API interactions
+
 ---
 
-*Last Updated: August 29, 2025*  
-*Status: Ready for API key setup and full testing*
+*Last Updated: September 1, 2025*  
+*Status: Production-ready with room-specific enhancements and exact AI Studio prompt integration*
