@@ -57,7 +57,9 @@ export async function POST(request: NextRequest) {
       // Check daily usage limits (only for real users)
       const today = new Date().toISOString().split('T')[0]
       
-      // Check user daily limit (10 per day)
+      // TODO: DEVELOPMENT - Daily limit disabled for testing
+      // Check user daily limit (100 per day) - DISABLED FOR DEVELOPMENT
+      /*
       const { data: userDailyUsage, error: userUsageError } = await supabase
         .from('enhancement_jobs')
         .select('id')
@@ -73,6 +75,7 @@ export async function POST(request: NextRequest) {
           message: 'You have reached your daily limit of 100 enhancements. Please try again tomorrow.' 
         }, { status: 429 })
       }
+      */
       
       // TODO: PRODUCTION - Re-enable application-wide daily limit for cost control
       // Check application-wide daily limit (50 per day) - DISABLED FOR DEVELOPMENT

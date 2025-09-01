@@ -24,13 +24,14 @@ export default function ImageJobEditor() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [progress, setProgress] = useState(0)
   
-  // Conversation history for multi-turn editing
+  // Conversation history for multi-turn editing - only custom modifications, not dropdown choices
   const [editHistory, setEditHistory] = useState<string[]>([])
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null)
   
   // Room type and style for accurate staging
   const [selectedRoomType, setSelectedRoomType] = useState('')
   const [selectedBedroomStyle, setSelectedBedroomStyle] = useState('')
+  const [selectedKitchenStyle, setSelectedKitchenStyle] = useState('')
   
   // Sequential step workflow - redesigned
   const [currentStep, setCurrentStep] = useState(1)
@@ -80,7 +81,7 @@ export default function ImageJobEditor() {
   const roomTypeOptions = [
     { value: 'bedroom', label: 'Bedroom', description: 'Bedroom with multiple styling options' },
     { value: 'living-room', label: 'Living Room', description: 'Coming soon - living room styles' },
-    { value: 'kitchen', label: 'Kitchen', description: 'Coming soon - kitchen styles' },
+    { value: 'kitchen', label: 'Kitchen', description: 'Kitchen with multiple styling options' },
     { value: 'dining-room', label: 'Dining Room', description: 'Coming soon - dining styles' },
     { value: 'bathroom', label: 'Bathroom', description: 'Coming soon - bathroom styles' },
     { value: 'office', label: 'Home Office', description: 'Coming soon - office styles' },
@@ -94,6 +95,14 @@ export default function ImageJobEditor() {
     { value: 'vibrant-eclectic', label: 'Vibrant & Eclectic', description: 'Bold patterns, colorful textiles, unique art for lively atmosphere' },
     { value: 'luxury-elegant', label: 'Luxury & Elegant', description: 'High-end bedding, opulent drapes, elegant furniture for luxury market' },
     { value: 'general-enhancement', label: 'General Enhancement', description: 'Improved lighting, organization, refreshed colors for broad appeal' }
+  ]
+  
+  const kitchenStyleOptions = [
+    { value: 'bright-clean', label: 'Bright & Clean', description: 'Brighten the kitchen with abundant natural light streaming through the windows and ensure all surfaces appear sparkling clean.' },
+    { value: 'spacious-tidy', label: 'Spacious & Tidy', description: 'Maximize the sense of spaciousness by enhancing the existing natural light, tidying all open shelves, and adding a subtle, light-colored decorative accent (e.g., a simple white pitcher) to a counter' },
+    { value: 'warm-golden', label: 'Warm & Sophisticated', description: 'Bathe the kitchen in soft, warm, golden hour lighting from strategically placed lamps and under-cabinet glow, creating a sophisticated and intimate atmosphere' },
+    { value: 'bold-vibrant', label: 'Bold & Vibrant', description: 'Infuse the kitchen with bold patterns on tiles or backsplashes, colorful small appliances or textiles, and unique, expressive decor pieces, creating a lively and individualistic atmosphere' },
+    { value: 'luxury-elegant', label: 'Luxury & Refined', description: 'Elevate the kitchen with high-end, polished finishes (e.g., marble or quartz), sophisticated lighting fixtures, and integrated, top-tier appliances, conveying a refined and opulent appeal' }
   ]
 
   const handleDrag = useCallback((e: React.DragEvent) => {
@@ -211,8 +220,8 @@ export default function ImageJobEditor() {
     const customInstruction = tempCustomInstructions.trim()
     if (!customInstruction) return ''
     
-    // Simple, focused repair prompt
-    return `FOCUSED REPAIR: carefully ${customInstruction.toLowerCase()}, completely removing all visible damage and imperfections, ensuring the repaired area looks seamless and professionally restored`
+    // Simple, focused custom modification prompt
+    return customInstruction.toLowerCase()
   }
 
   const handlePresetClick = (presetId: string, category: 'enhancement' | 'lighting') => {
@@ -322,9 +331,13 @@ export default function ImageJobEditor() {
 
       const result = await response.json()
       
-      // Update with repaired image
+      // Update with repaired image and add custom modification to edit history
       setEnhancedImage(result.enhancedImageUrl)
       setCurrentImageUrl(result.enhancedImageUrl)
+      
+      // Add this custom modification to edit history
+      const newHistory = [...editHistory, repairPrompt]
+      setEditHistory(newHistory)
 
     } catch (error) {
       console.error('Repair error:', error)
@@ -501,13 +514,15 @@ export default function ImageJobEditor() {
                       )}
                       
                       {/* Post-Generation Custom Modifications */}
-                      <div className="mt-4 pt-4 border-t border-gray-200">
-                        <h5 className="font-medium text-sm mb-3">Make Additional Changes</h5>
+                      <div className="mt-4 pt-4 border-t-2 border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 p-4 rounded-lg">
+                        <h5 className="font-bold text-lg mb-3 text-orange-800 text-center">🎨 Make Additional Changes</h5>
+                        <p className="text-sm text-orange-700 text-center mb-4">Perfect your photo with custom tweaks and modifications</p>
                         <div className="space-y-3">
                           <Input
                             placeholder="e.g., 'remove the TV', 'change pillow color to blue', 'add a plant on nightstand'..."
                             value={tempCustomInstructions}
                             onChange={(e) => setTempCustomInstructions(e.target.value)}
+                            className="border-orange-200 focus:border-orange-400"
                           />
                           <Button
                             onClick={() => {
@@ -515,9 +530,8 @@ export default function ImageJobEditor() {
                               handleApplyRepair()
                             }}
                             disabled={!enhancedImage || !tempCustomInstructions.trim() || isProcessing || creditBalance <= 0}
-                            variant="outline"
-                            size="sm"
-                            className="w-full"
+                            size="lg"
+                            className="w-full bg-orange-600 hover:bg-orange-700 text-white"
                           >
                             <Wand2 className="h-4 w-4 mr-2" />
                             {isProcessing ? 'Modifying...' : 'Apply Modification'}
@@ -536,326 +550,187 @@ export default function ImageJobEditor() {
             </div>
           )}
 
-          {/* Sequential Step-by-Step Enhancement Workflow */}
-          <div className="space-y-6">
-            <div className="space-y-4">
-              {/* Quick Enhance Option */}
-              <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-lg border border-blue-200">
-                <div className="text-center space-y-3">
-                  <h3 className="text-lg font-semibold text-blue-800">🚀 Quick Enhance (Recommended)</h3>
-                  <p className="text-sm text-blue-700">Let AI automatically enhance your photos with proven settings that help properties sell faster</p>
+          {/* Quick Enhance Option */}
+          <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-lg border border-blue-200">
+            <div className="text-center space-y-3">
+              <h3 className="text-lg font-semibold text-blue-800">🚀 Quick Enhance (Recommended)</h3>
+              <p className="text-sm text-blue-700">Let AI automatically enhance your photos with proven settings that help properties sell faster</p>
+              
+              {/* Room Type & Style Selectors */}
+              <div className="max-w-sm mx-auto space-y-3">
+                <Select value={selectedRoomType} onValueChange={(value) => {
+                  setSelectedRoomType(value)
+                  setSelectedBedroomStyle('') // Reset style when room changes
+                  setSelectedKitchenStyle('') // Reset kitchen style when room changes
+                }} disabled={editHistory.length > 0}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="1. What type of room is this?" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roomTypeOptions.map((room) => (
+                      <SelectItem key={room.value} value={room.value}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{room.label}</span>
+                          <span className="text-xs text-gray-500">{room.description}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                {/* Bedroom Style Options */}
+                {selectedRoomType === 'bedroom' && (
+                  <Select value={selectedBedroomStyle} onValueChange={setSelectedBedroomStyle} disabled={editHistory.length > 0}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="2. Choose bedroom style" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {bedroomStyleOptions.map((style) => (
+                        <SelectItem key={style.value} value={style.value}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{style.label}</span>
+                            <span className="text-xs text-gray-500">{style.description}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                
+                {/* Kitchen Style Options */}
+                {selectedRoomType === 'kitchen' && (
+                  <Select value={selectedKitchenStyle} onValueChange={setSelectedKitchenStyle} disabled={editHistory.length > 0}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="2. Choose kitchen style" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {kitchenStyleOptions.map((style) => (
+                        <SelectItem key={style.value} value={style.value}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{style.label}</span>
+                            <span className="text-xs text-gray-500">{style.description}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                
+                {/* Other room types - coming soon message */}
+                {selectedRoomType && selectedRoomType !== 'bedroom' && selectedRoomType !== 'kitchen' && selectedRoomType !== 'other' && (
+                  <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
+                    🚧 {roomTypeOptions.find(r => r.value === selectedRoomType)?.label} styles coming soon! For now, use the Custom Fine-Tuning section below for enhancements.
+                  </div>
+                )}
+                
+                {/* Locked message when custom modifications exist */}
+                {editHistory.length > 0 && (
+                  <div className="text-sm text-blue-600 bg-blue-50 p-3 rounded border border-blue-200">
+                    🔒 Style locked after custom modifications. Use "Start Fresh Edit Session" below to change the base style.
+                  </div>
+                )}
+              </div>
+              <Button
+                onClick={async () => {
+                  // Quick Enhance with explicit prompt to avoid state timing issues
+                  setIsProcessing(true)
+                  setProgress(0)
                   
-                  {/* Room Type & Style Selectors */}
-                  <div className="max-w-sm mx-auto space-y-3">
-                    <Select value={selectedRoomType} onValueChange={(value) => {
-                      setSelectedRoomType(value)
-                      setSelectedBedroomStyle('') // Reset style when room changes
-                    }}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="1. What type of room is this?" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {roomTypeOptions.map((room) => (
-                          <SelectItem key={room.value} value={room.value}>
-                            <div className="flex flex-col">
-                              <span className="font-medium">{room.label}</span>
-                              <span className="text-xs text-gray-500">{room.description}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  try {
+                    const progressInterval = setInterval(() => {
+                      setProgress(prev => Math.min(prev + 10, 90))
+                    }, 500)
+
+                    const baseImageUrl = currentImageUrl || uploadedImage
                     
-                    {/* Bedroom Style Options */}
-                    {selectedRoomType === 'bedroom' && (
-                      <Select value={selectedBedroomStyle} onValueChange={setSelectedBedroomStyle}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="2. Choose bedroom style" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {bedroomStyleOptions.map((style) => (
-                            <SelectItem key={style.value} value={style.value}>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{style.label}</span>
-                                <span className="text-xs text-gray-500">{style.description}</span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
+                    // Room-specific Quick Enhance prompt (HDR + appropriate staging)
+                    // Exact working prompts from AI Studio testing
+                    const bedroomStylePrompts = {
+                      'hotel-clean': 'Make the bed neatly, with the sheets and blankets perfectly tucked in and smoothed, as if ready for a hotel guest',
+                      'cozy-warm': 'Enhance the bedroom with soft, inviting textures, warm lighting, and natural elements like a wooden headboard and a potted plant, creating a cozy and serene retreat',
+                      'modern-minimalist': 'Modernize the bedroom with clean lines, a neutral color palette, smart storage solutions to reduce clutter, and subtle metallic accents for a sleek and sophisticated feel',
+                      'vibrant-eclectic': 'Infuse the bedroom with personality by adding bold patterns, a mix of colorful textiles, unique art pieces, and a statement piece of furniture for an eclectic and lively atmosphere',
+                      'luxury-elegant': 'Transform the bedroom into a luxurious sanctuary with high-thread-count bedding, opulent drapes, a plush rug, elegant mirrored furniture, and soft, ambient lighting',
+                      'general-enhancement': 'Enhance the bedroom with improved lighting, thoughtful organization, a refreshed color scheme, and carefully selected decorative accents to create a more inviting and aesthetically pleasing space'
+                    }
                     
-                    {/* Other room types - coming soon message */}
-                    {selectedRoomType && selectedRoomType !== 'bedroom' && selectedRoomType !== 'other' && (
-                      <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
-                        🚧 {roomTypeOptions.find(r => r.value === selectedRoomType)?.label} styles coming soon! For now, use the Polish & Repair section below for custom enhancements.
-                      </div>
-                    )}
-                  </div>
-                  <Button
-                    onClick={async () => {
-                      // Quick Enhance with explicit prompt to avoid state timing issues
-                      setIsProcessing(true)
-                      setProgress(0)
-                      
-                      try {
-                        const progressInterval = setInterval(() => {
-                          setProgress(prev => Math.min(prev + 10, 90))
-                        }, 500)
+                    const kitchenStylePrompts = {
+                      'bright-clean': 'Brighten the kitchen with abundant natural light streaming through the windows and ensure all surfaces appear sparkling clean.',
+                      'spacious-tidy': 'Maximize the sense of spaciousness by enhancing the existing natural light, tidying all open shelves, and adding a subtle, light-colored decorative accent (e.g., a simple white pitcher) to a counter',
+                      'warm-golden': 'Bathe the kitchen in soft, warm, golden hour lighting from strategically placed lamps and under-cabinet glow, creating a sophisticated and intimate atmosphere',
+                      'bold-vibrant': 'Infuse the kitchen with bold patterns on tiles or backsplashes, colorful small appliances or textiles, and unique, expressive decor pieces, creating a lively and individualistic atmosphere',
+                      'luxury-elegant': 'Elevate the kitchen with high-end, polished finishes (e.g., marble or quartz), sophisticated lighting fixtures, and integrated, top-tier appliances, conveying a refined and opulent appeal'
+                    }
+                    
+                    let stagingInstruction = ''
+                    if (selectedRoomType === 'bedroom' && selectedBedroomStyle) {
+                      stagingInstruction = bedroomStylePrompts[selectedBedroomStyle]
+                    } else if (selectedRoomType === 'kitchen' && selectedKitchenStyle) {
+                      stagingInstruction = kitchenStylePrompts[selectedKitchenStyle]
+                    } else {
+                      stagingInstruction = 'enhance this property photo with professional real estate quality and appropriate staging'
+                    }
+                    
+                    // Use exact working prompts without HDR prefix for bedroom and kitchen styles
+                    const quickPrompt = (selectedRoomType === 'bedroom' && selectedBedroomStyle) || (selectedRoomType === 'kitchen' && selectedKitchenStyle) ? stagingInstruction : `Edit this image with HDR real estate photography enhancement, boosting dynamic range, eliminating shadows, and creating vibrant, well-exposed details throughout, while also ${stagingInstruction}`
+                    
+                    console.log('Quick Enhance prompt:', quickPrompt)
+                    
+                    const response = await fetch('/api/enhance', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${await getAuthToken()}`
+                      },
+                      body: JSON.stringify({
+                        imageUrl: editHistory.length > 0 ? (currentImageUrl || uploadedImage) : uploadedImage, // Use original image if no custom mods
+                        prompt: quickPrompt,
+                        preset: null,
+                        editHistory: editHistory,
+                        isMultiTurn: editHistory.length > 0
+                      })
+                    })
 
-                        const baseImageUrl = currentImageUrl || uploadedImage
-                        
-                        // Room-specific Quick Enhance prompt (HDR + appropriate staging)
-                        // Exact working prompts from AI Studio testing
-                        const bedroomStylePrompts = {
-                          'hotel-clean': 'Make the bed neatly, with the sheets and blankets perfectly tucked in and smoothed, as if ready for a hotel guest',
-                          'cozy-warm': 'Enhance the bedroom with soft, inviting textures, warm lighting, and natural elements like a wooden headboard and a potted plant, creating a cozy and serene retreat',
-                          'modern-minimalist': 'Modernize the bedroom with clean lines, a neutral color palette, smart storage solutions to reduce clutter, and subtle metallic accents for a sleek and sophisticated feel',
-                          'vibrant-eclectic': 'Infuse the bedroom with personality by adding bold patterns, a mix of colorful textiles, unique art pieces, and a statement piece of furniture for an eclectic and lively atmosphere',
-                          'luxury-elegant': 'Transform the bedroom into a luxurious sanctuary with high-thread-count bedding, opulent drapes, a plush rug, elegant mirrored furniture, and soft, ambient lighting',
-                          'general-enhancement': 'Enhance the bedroom with improved lighting, thoughtful organization, a refreshed color scheme, and carefully selected decorative accents to create a more inviting and aesthetically pleasing space'
-                        }
-                        
-                        let stagingInstruction = ''
-                        if (selectedRoomType === 'bedroom' && selectedBedroomStyle) {
-                          stagingInstruction = bedroomStylePrompts[selectedBedroomStyle]
-                        } else {
-                          stagingInstruction = 'enhance this property photo with professional real estate quality and appropriate staging'
-                        }
-                        
-                        // Use exact working prompts without HDR prefix for bedroom styles
-                        const quickPrompt = selectedRoomType === 'bedroom' && selectedBedroomStyle ? stagingInstruction : `Edit this image with HDR real estate photography enhancement, boosting dynamic range, eliminating shadows, and creating vibrant, well-exposed details throughout, while also ${stagingInstruction}`
-                        
-                        console.log('Quick Enhance prompt:', quickPrompt)
-                        
-                        const response = await fetch('/api/enhance', {
-                          method: 'POST',
-                          headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${await getAuthToken()}`
-                          },
-                          body: JSON.stringify({
-                            imageUrl: baseImageUrl,
-                            prompt: quickPrompt,
-                            preset: null,
-                            editHistory: editHistory,
-                            isMultiTurn: editHistory.length > 0
-                          })
-                        })
+                    clearInterval(progressInterval)
+                    setProgress(100)
 
-                        clearInterval(progressInterval)
-                        setProgress(100)
+                    if (!response.ok) {
+                      const errorData = await response.json()
+                      throw new Error(errorData.error || 'Enhancement failed')
+                    }
 
-                        if (!response.ok) {
-                          const errorData = await response.json()
-                          throw new Error(errorData.error || 'Enhancement failed')
-                        }
+                    const result = await response.json()
+                    
+                    // Update state after successful enhancement
+                    setStepData({
+                      photoStyleChoice: 'hdr',
+                      addElementsChoice: 'staging',
+                      customInstructions: ''
+                    })
+                    setCompletedSteps(new Set([1, 2]))
+                    
+                    // Don't add dropdown choices to edit history - only add custom modifications
+                    setCurrentImageUrl(result.enhancedImageUrl)
+                    setEnhancedImage(result.enhancedImageUrl)
 
-                        const result = await response.json()
-                        
-                        // Update state after successful enhancement
-                        setStepData({
-                          photoStyleChoice: 'hdr',
-                          addElementsChoice: 'staging',
-                          customInstructions: ''
-                        })
-                        setCompletedSteps(new Set([1, 2]))
-                        
-                        const newHistory = [...editHistory, quickPrompt]
-                        setEditHistory(newHistory)
-                        setCurrentImageUrl(result.enhancedImageUrl)
-                        setEnhancedImage(result.enhancedImageUrl)
-
-                      } catch (error) {
-                        console.error('Quick Enhance error:', error)
-                        setProgress(0)
-                      } finally {
-                        setIsProcessing(false)
-                      }
-                    }}
-                    disabled={!uploadedImage || isProcessing || creditBalance <= 0 || !selectedRoomType || (selectedRoomType === 'bedroom' && !selectedBedroomStyle)}
-                    size="lg"
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    {isProcessing ? 'Enhancing...' : 'Quick Enhance Photo'}
-                    {uploadedImage && creditBalance > 0 && <span className="ml-2 text-xs">(1 credit)</span>}
-                  </Button>
-                  <p className="text-xs text-blue-600">HDR Professional Quality + Modern Staging in one click</p>
-                </div>
-              </div>
-              
-              <div className="text-center text-sm text-gray-600 py-2">
-                <span>or customize step-by-step below</span>
-              </div>
-              
-              <h3 className="text-lg font-semibold text-gray-800">Advanced Enhancement Workflow</h3>
-              <p className="text-sm text-gray-600">Complete each step in order for full control over your photo transformation.</p>
-              
-              {/* Progress Indicator */}
-              <div className="flex items-center justify-between mb-6">
-                {[1, 2].map((step) => {
-                  const isCompleted = completedSteps.has(step)
-                  const isCurrent = currentStep === step
-                  const isAccessible = isStepAccessible(step)
-                  
-                  return (
-                    <div key={step} className="flex items-center">
-                      <div className={`
-                        flex items-center justify-center w-8 h-8 rounded-full border-2 text-sm font-medium
-                        ${isCompleted 
-                          ? 'bg-green-500 border-green-500 text-white' 
-                          : isCurrent && isAccessible
-                            ? 'bg-blue-500 border-blue-500 text-white'
-                            : isAccessible
-                              ? 'bg-gray-100 border-gray-300 text-gray-600'
-                              : 'bg-gray-50 border-gray-200 text-gray-400'
-                        }
-                      `}>
-                        {isCompleted ? <Check className="h-4 w-4" /> : step}
-                      </div>
-                      <span className={`ml-2 text-sm ${
-                        isCompleted ? 'text-green-600 font-medium' : 
-                        isCurrent && isAccessible ? 'text-blue-600 font-medium' :
-                        isAccessible ? 'text-gray-600' : 'text-gray-400'
-                      }`}>
-                        Step {step}
-                      </span>
-                      {step < 2 && <div className="w-12 h-px bg-gray-300 mx-4" />}
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* Step 1: Photo Style */}
-              <Card className={`transition-all ${
-                currentStep === 1 ? 'ring-2 ring-blue-500 bg-blue-50' : 
-                completedSteps.has(1) ? 'bg-green-50 border-green-200' :
-                'bg-gray-50 opacity-75'
-              }`}>
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center">
-                      <ImageIcon className="h-5 w-5 mr-2 text-purple-600" />
-                      <h4 className="text-md font-semibold">Step 1: Photo Quality & Style</h4>
-                      {completedSteps.has(1) && (
-                        <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                          Completed: {stepData.photoStyleChoice === 'no-change' ? 'Original Quality' : 
-                            photoStyleOptions.find(opt => opt.value === stepData.photoStyleChoice)?.label}
-                        </span>
-                      )}
-                    </div>
-                    {!isStepAccessible(1) && <Lock className="h-4 w-4 text-gray-400" />}
-                  </div>
-                  
-                  {currentStep === 1 && (
-                    <div className="space-y-3">
-                      <Select value={tempPhotoStyleChoice} onValueChange={setTempPhotoStyleChoice}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Choose photo quality enhancement" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {photoStyleOptions.map((style) => (
-                            <SelectItem key={style.value} value={style.value}>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{style.label}</span>
-                                <span className="text-xs text-gray-500">{style.description}</span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      
-                      <Button 
-                        onClick={() => handleStepComplete(1)}
-                        disabled={!canCompleteStep(1)}
-                        size="sm"
-                        className="w-full"
-                      >
-                        Complete Step 1
-                      </Button>
-                    </div>
-                  )}
-                  
-                  {currentStep !== 1 && !completedSteps.has(1) && (
-                    <p className="text-sm text-gray-500">Complete Step 1: Photo Style to unlock this step.</p>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Step 2: Add Elements */}
-              <Card className={`transition-all ${
-                currentStep === 2 ? 'ring-2 ring-blue-500 bg-blue-50' : 
-                completedSteps.has(2) ? 'bg-green-50 border-green-200' :
-                'bg-gray-50 opacity-75'
-              }`}>
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center">
-                      <Sparkles className="h-5 w-5 mr-2 text-green-600" />
-                      <h4 className="text-md font-semibold">Step 2: Virtual Staging & Elements</h4>
-                      {completedSteps.has(2) && (
-                        <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                          Completed: {stepData.addElementsChoice === 'no-change' ? 'No Additions' : 
-                            addElementsOptions.find(opt => opt.value === stepData.addElementsChoice)?.label}
-                        </span>
-                      )}
-                    </div>
-                    {!isStepAccessible(2) && <Lock className="h-4 w-4 text-gray-400" />}
-                  </div>
-                  
-                  {currentStep === 2 && isStepAccessible(2) && (
-                    <div className="space-y-3">
-                      <Select value={tempAddElementsChoice} onValueChange={setTempAddElementsChoice}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Choose staging elements" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {addElementsOptions.map((element) => (
-                            <SelectItem key={element.value} value={element.value}>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{element.label}</span>
-                                <span className="text-xs text-gray-500">{element.description}</span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      
-                      <Button 
-                        onClick={() => handleStepComplete(2)}
-                        disabled={!canCompleteStep(2)}
-                        size="sm"
-                        className="w-full"
-                      >
-                        Complete Step 2
-                      </Button>
-                    </div>
-                  )}
-                  
-                  {!isStepAccessible(2) && (
-                    <p className="text-sm text-gray-500">Complete Step 1 first to unlock this step.</p>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Removed Step 3 - Custom Instructions now handled in Polish & Repair section */}
-
-              {/* Workflow Reset Button */}
-              {completedSteps.size > 0 && (
-                <div className="flex justify-center">
-                  <Button
-                    onClick={resetWorkflow}
-                    variant="outline"
-                    size="sm"
-                  >
-                    Reset Workflow
-                  </Button>
-                </div>
-              )}
+                  } catch (error) {
+                    console.error('Quick Enhance error:', error)
+                    setProgress(0)
+                  } finally {
+                    setIsProcessing(false)
+                  }
+                }}
+                disabled={!uploadedImage || isProcessing || creditBalance <= 0 || !selectedRoomType || (selectedRoomType === 'bedroom' && !selectedBedroomStyle) || (selectedRoomType === 'kitchen' && !selectedKitchenStyle) || editHistory.length > 0}
+                size="lg"
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                {isProcessing ? 'Enhancing...' : 'Quick Enhance Photo'}
+                {uploadedImage && creditBalance > 0 && <span className="ml-2 text-xs">(1 credit)</span>}
+              </Button>
+              <p className="text-xs text-blue-600">HDR Professional Quality + Modern Staging in one click</p>
             </div>
           </div>
-
 
           {/* Processing Progress */}
           {isProcessing && (
@@ -868,70 +743,32 @@ export default function ImageJobEditor() {
             </div>
           )}
 
-          {/* Two-Stage Workflow Buttons - Repair First */}
-          <div className="space-y-6">
-            {/* Stage 1: Polish & Repair (first stage) */}
-            <div className="border rounded-lg p-4 bg-yellow-50">
-              <h4 className="text-md font-semibold text-center mb-4 text-yellow-800">Stage 1: Polish & Repair</h4>
-              <p className="text-sm text-yellow-700 text-center mb-4">Fix any issues on the original photo first for best results</p>
-              <div className="space-y-3">
-                <Input
-                  placeholder="e.g., 'repair the torn cushion', 'fix the water stain', 'remove the clutter'... (Optional - skip if no repairs needed)"
-                  value={tempCustomInstructions}
-                  onChange={(e) => setTempCustomInstructions(e.target.value)}
-                />
-                <div className="flex justify-center">
-                  <Button
-                    onClick={() => {
-                      setStepData(prev => ({ ...prev, customInstructions: tempCustomInstructions }))
-                      handleApplyRepair()
-                    }}
-                    disabled={!uploadedImage || isProcessing || creditBalance <= 0 || !tempCustomInstructions.trim()}
-                    size="lg"
-                    variant="outline"
-                    className="min-w-48"
-                  >
-                    <Wand2 className="h-4 w-4 mr-2" />
-                    {isProcessing ? 'Polishing...' : 'Apply Polish/Repair'}
-                    {uploadedImage && creditBalance > 0 && tempCustomInstructions.trim() && <span className="ml-2 text-xs">(1 credit)</span>}
-                  </Button>
-                </div>
-                <div className="text-center">
-                  <Button
-                    onClick={() => {
-                      // Skip repair stage, go straight to transform
-                      setCurrentImageUrl(uploadedImage)
-                      setEnhancedImage(uploadedImage)
-                    }}
-                    variant="ghost"
-                    size="sm"
-                    disabled={!uploadedImage}
-                  >
-                    Skip to Transform →
-                  </Button>
-                </div>
+          {/* Custom Fine-Tuning */}
+          <div className="bg-gray-50 p-4 rounded-lg border">
+            <h4 className="text-md font-semibold text-center mb-3">Custom Fine-Tuning</h4>
+            <div className="space-y-3">
+              <Input
+                placeholder="e.g., 'remove the TV', 'change pillow color to blue', 'add a plant on nightstand'..."
+                value={tempCustomInstructions}
+                onChange={(e) => setTempCustomInstructions(e.target.value)}
+              />
+              <div className="flex justify-center">
+                <Button
+                  onClick={() => {
+                    setStepData(prev => ({ ...prev, customInstructions: tempCustomInstructions }))
+                    handleApplyRepair()
+                  }}
+                  disabled={!uploadedImage || isProcessing || creditBalance <= 0 || !tempCustomInstructions.trim()}
+                  size="lg"
+                  variant="outline"
+                  className="min-w-48"
+                >
+                  <Wand2 className="h-4 w-4 mr-2" />
+                  {isProcessing ? 'Applying...' : 'Apply Custom Changes'}
+                  {uploadedImage && creditBalance > 0 && tempCustomInstructions.trim() && <span className="ml-2 text-xs">(1 credit)</span>}
+                </Button>
               </div>
             </div>
-            
-            {/* Stage 2: Transform Photo (after repair or skip) */}
-            {(enhancedImage || currentImageUrl) && (
-              <div className="border-t pt-6">
-                <h4 className="text-md font-semibold text-center mb-4">Stage 2: Transform Photo</h4>
-                <p className="text-sm text-gray-600 text-center mb-4">Apply style and staging to your {enhancedImage !== uploadedImage ? 'repaired' : 'original'} photo</p>
-                <div className="flex justify-center">
-                  <Button
-                    onClick={handleTransformPhoto}
-                    disabled={!canTransform}
-                    size="lg"
-                    className="min-w-48"
-                  >
-                    <ImageIcon className="h-4 w-4 mr-2" />
-                    {isProcessing ? 'Transforming...' : 'Transform Photo'}
-                    {canTransform && <span className="ml-2 text-xs">(1 credit)</span>}
-                  </Button>
-                </div>
-              </div>
-            )}
           </div>
           
           {/* Helper text */}
