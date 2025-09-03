@@ -63,20 +63,40 @@
 ### Phase 8: Room-Specific Enhancement & Exact AI Studio Prompts ✅
 - [x] **Room Type Detection**: Bedroom, Living Room, Kitchen, Bathroom, Office categories
 - [x] **Bedroom-Specific Styling**: 6 curated bedroom enhancement options
+- [x] **Kitchen-Specific Styling**: 5 curated kitchen enhancement options with exact user prompts
 - [x] **Exact AI Studio Prompts**: Verbatim prompts that work perfectly in Google AI Studio
-- [x] **Prompt Precision**: Removed interfering HDR prefixes for bedroom styles
+- [x] **Prompt Precision**: Removed interfering HDR prefixes for bedroom and kitchen styles
 - [x] **Two-Stage Workflow**: Quick Enhance → Custom Modifications
 - [x] **Multi-Turn Consistency**: Maintains previous changes while applying new ones
 - [x] **Realtor-Focused UX**: "Sell Homes Faster" messaging with proven statistics
 
+### Phase 9: Streamlined Workflow & UX Optimization ✅
+- [x] **Simplified Interface**: Removed complex Advanced Enhancement Workflow
+- [x] **Clean Dropdown Logic**: Free style experimentation until custom modifications lock choices
+- [x] **Enhanced Custom Section**: Prominent orange-styled "Make Additional Changes" area
+- [x] **Optimal Edit Flow**: Start from original image for style changes, preserve exact custom mods
+- [x] **Clean Prompt System**: Remove repair language from simple custom modifications
+- [x] **Development Optimization**: Disabled daily limits for testing and development
+
+### Phase 10: Universal Lighting Enhancement System ✅
+- [x] **Simplified UI**: Replaced room/style selection with single lighting dropdown
+- [x] **4 Universal Lighting Options**: Very Warm, Indoor Evening, Dusk, Bright Light
+- [x] **Streamlined User Flow**: Upload → Select Lighting → Enhance (no room classification needed)
+- [x] **Fixed Custom Modification Persistence**: Each change builds on most recent enhanced image
+- [x] **Eliminated Complex Prompts**: Simple current-modification-only approach
+- [x] **Improved Multi-Turn Logic**: Visual history via images instead of text descriptions
+- [x] **Better User Experience**: No cognitive load from room categorization decisions
+
 ## 🎯 Key Features
 
 ### 🤖 AI-Powered Enhancement
-- **Simplified Enhancement Tools**: Declutter, Brighten, Repair (3 reliable options)
-- **Lighting Moods**: Warm/Golden, Bright/Natural (2 simple choices)
-- **Custom Instructions**: Specific user requests with conversational AI prompts
-- **Multi-Turn Editing**: Preserve previous changes while applying new modifications
-- **Gemini 2.5 Flash Image**: Actual visual transformation and generation
+- **Universal Lighting Enhancement**: 4 lighting options (Very Warm, Indoor Evening, Dusk, Bright Light)
+- **Streamlined Quick Enhance**: One-click lighting enhancement for any property photo
+- **Custom Fine-Tuning**: Simple, clean custom modifications without repair language overhead
+- **Smart Workflow Logic**: Free lighting experimentation, then locked commitment after customization
+- **Multi-Turn Editing**: Preserve exact custom modifications while allowing lighting changes
+- **Fixed Persistence Logic**: Each modification builds on most recent enhanced image
+- **Gemini 2.5 Flash Image**: Actual visual transformation and generation via OpenRouter
 - **Download Capability**: High-quality enhanced images ready for MLS
 
 ### 🔐 Secure Authentication
@@ -233,9 +253,10 @@ Frontend (Next.js) → API Route (/api/enhance) → OpenRouter → Gemini 2.5 Fl
 ### Key Technical Decisions
 - **OpenRouter over Direct API**: Avoids Google's strict rate limits while maintaining model access
 - **Room-Specific Prompts**: Prevents unwanted room type changes (bedroom → living room)
-- **Two-Stage Workflow**: Quick Enhance + Custom Modifications for optimal results
-- **Exact Prompt Matching**: Verbatim AI Studio prompts for consistent results
-- **Repair-First Logic**: Better results when repairs are applied to original images
+- **Streamlined Workflow**: Quick Enhance + Custom Fine-Tuning with optimal state management
+- **Exact Prompt Matching**: Verbatim AI Studio prompts for bedroom and kitchen styles
+- **Smart Lock Logic**: Allow style experimentation, lock after custom modifications to prevent conflicts
+- **Clean Original Start**: Each style change starts from original image to avoid remnant accumulation
 
 ### Development Environment
 - **Local Development**: `npm run dev` with Turbopack
@@ -245,5 +266,5 @@ Frontend (Next.js) → API Route (/api/enhance) → OpenRouter → Gemini 2.5 Fl
 
 ---
 
-*Last Updated: September 1, 2025*  
-*Status: Production-ready with room-specific enhancements and exact AI Studio prompt integration*
+*Last Updated: September 2, 2025*  
+*Status: Production-ready with universal lighting enhancement system and improved custom modification persistence*

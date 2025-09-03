@@ -186,11 +186,10 @@ export async function POST(request: NextRequest) {
       console.log('Prompt:', prompt)
       console.log('Enhancement prompt before multi-turn:', enhancementPrompt)
       
-      // For multi-turn editing, build on previous scene description
+      // For multi-turn editing, just use the current prompt - no history needed
+      // Each modification applies to the most recent image result
       if (isMultiTurn && editHistory.length > 0) {
-        // Combine previous edits into a cumulative scene description
-        const sceneHistory = editHistory.join(', while also ')
-        enhancementPrompt = `Continue enhancing this property photo that has already been transformed with: ${sceneHistory}. Now also ${enhancementPrompt.toLowerCase()}. Maintain all previous improvements while applying this new enhancement. Create a cohesive, professional real estate photo that combines all these elements naturally.`
+        enhancementPrompt = prompt // Use only the current modification
       }
       
       console.log('Final prompt sent to AI:', enhancementPrompt)
